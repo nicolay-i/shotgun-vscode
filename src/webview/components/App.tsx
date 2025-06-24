@@ -5,6 +5,7 @@ import PromptSection from './PromptSection';
 import SelectedFiles from './SelectedFiles';
 import ResponseSection from './ResponseSection';
 import LoadingOverlay from './LoadingOverlay';
+import ApiSettings from './ApiSettings';
 
 // Получаем API VSCode
 declare const acquireVsCodeApi: () => VSCodeAPI;
@@ -33,6 +34,7 @@ const App: React.FC = () => {
     });
     const [response, setResponse] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [apiSettingsExpanded, setApiSettingsExpanded] = useState<boolean>(false);
 
     useEffect(() => {
         // Запросить дерево файлов при загрузке
@@ -53,7 +55,7 @@ const App: React.FC = () => {
                         return newMap;
                     });
                     break;
-                case 'geminiResponse':
+                case 'aiResponse':
                     setResponse(message.data);
                     setIsLoading(false);
                     break;
@@ -176,10 +178,15 @@ const App: React.FC = () => {
             content
         }));
         
+        // Получаем настройки API из localStorage
+        const apiConfig = localStorage.getItem('shotgun_api_config');
+        const config = apiConfig ? JSON.parse(apiConfig) : { provider: 'gemini' };
+        
         vscode.postMessage({
-            type: 'submitToGemini',
+            type: 'submitToAI',
             prompt: prompt,
-            selectedFiles: filesArray
+            selectedFiles: filesArray,
+            apiConfig: config
         });
     };
 
@@ -229,6 +236,11 @@ const App: React.FC = () => {
                 <div className="panel-header">
                     <h3>🤖 AI Ассистент</h3>
                 </div>
+                
+                <ApiSettings 
+                    isExpanded={apiSettingsExpanded}
+                    onToggle={() => setApiSettingsExpanded(!apiSettingsExpanded)}
+                />
                 
                 <PromptSection 
                     prompt={prompt}

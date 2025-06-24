@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { ApiService } from '../services/ApiService';
+import { ApiConfig, SelectedFile } from '../types/ApiTypes';
 
 export class ShotgunPanel {
     public static currentPanel: ShotgunPanel | undefined;
@@ -55,8 +56,8 @@ export class ShotgunPanel {
                     case 'openFile':
                         await this._openFile(message.filePath);
                         break;
-                    case 'submitToGemini':
-                        await this._submitToGemini(message.prompt, message.selectedFiles);
+                    case 'submitToAI':
+                        await this._submitToAI(message.prompt, message.selectedFiles, message.apiConfig);
                         break;
                     case 'saveResponse':
                         await this._saveResponse(message.content);
@@ -170,39 +171,28 @@ export class ShotgunPanel {
         }
     }
 
-    private async _submitToGemini(prompt: string, selectedFiles: { path: string, content: string }[]) {
+    private async _submitToAI(prompt: string, selectedFiles: SelectedFile[], apiConfig: ApiConfig) {
         try {
-            const config = vscode.workspace.getConfiguration('shotgun');
-            const apiKey = config.get<string>('geminiApiKey');
-
-            if (!apiKey) {
-                vscode.window.showErrorMessage('Пожалуйста, установите Gemini API ключ в настройках расширения');
-                return;
-            }
-
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-            let fullPrompt = prompt + '\n\n--- Содержимое файлов ---\n\n';
-            
-            for (const file of selectedFiles) {
-                fullPrompt += `=== ${file.path} ===\n${file.content}\n\n`;
-            }
-
             this._panel.webview.postMessage({
                 type: 'loadingStart'
             });
 
-            const result = await model.generateContent(fullPrompt);
-            const response = result.response.text();
+            const result = await ApiService.callAI(prompt, selectedFiles, apiConfig);
 
-            this._panel.webview.postMessage({
-                type: 'geminiResponse',
-                data: response
-            });
+            if (result.success) {
+                this._panel.webview.postMessage({
+                    type: 'aiResponse',
+                    data: result.data
+                });
+            } else {
+                vscode.window.showErrorMessage(result.error || 'Неизвестная ошибка API');
+                this._panel.webview.postMessage({
+                    type: 'loadingEnd'
+                });
+            }
 
         } catch (error) {
-            vscode.window.showErrorMessage(`Ошибка Gemini API: ${error}`);
+            vscode.window.showErrorMessage(`Ошибка API: ${error}`);
             this._panel.webview.postMessage({
                 type: 'loadingEnd'
             });

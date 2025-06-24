@@ -316,7 +316,7 @@ body {
             }
         }
         
-        #saveBtn {
+        .save-btn {
             background-color: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
             border: none;
@@ -418,5 +418,122 @@ body {
     
     &:active {
         background: var(--vscode-scrollbarSlider-activeBackground);
+    }
+}
+
+// API Settings Component
+.api-settings {
+    border-bottom: 1px solid var(--vscode-panel-border);
+    
+    .api-settings-header {
+        padding: 12px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: var(--vscode-sideBarSectionHeader-background);
+        border-bottom: 1px solid var(--vscode-panel-border);
+        transition: background-color 0.15s ease;
+        
+        &:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            
+            svg {
+                color: var(--vscode-symbolIcon-textForeground);
+            }
+            
+            > span {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--vscode-sideBarSectionHeader-foreground);
+            }
+            
+            .provider-info {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-left: auto;
+                margin-right: 16px;
+                padding: 4px 8px;
+                background-color: var(--vscode-badge-background);
+                color: var(--vscode-badge-foreground);
+                border-radius: 12px;
+                font-size: 11px;
+                
+                svg {
+                    font-size: 12px;
+                }
+            }
+        }
+        
+        .chevron {
+            color: var(--vscode-symbolIcon-textForeground);
+            transition: transform 0.2s ease;
+            
+            &.expanded {
+                transform: rotate(180deg);
+            }
+        }
+    }
+    
+    .api-settings-content {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background-color: var(--vscode-input-background);
+        
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            
+            label {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                font-weight: 500;
+                color: var(--vscode-foreground);
+                
+                svg {
+                    color: var(--vscode-symbolIcon-textForeground);
+                }
+            }
+            
+            select, input {
+                padding: 8px 12px;
+                border: 1px solid var(--vscode-input-border);
+                background-color: var(--vscode-input-background);
+                color: var(--vscode-input-foreground);
+                font-family: inherit;
+                font-size: 13px;
+                border-radius: 3px;
+                
+                &:focus {
+                    outline: none;
+                    border-color: var(--vscode-focusBorder);
+                }
+                
+                &::placeholder {
+                    color: var(--vscode-input-placeholderForeground);
+                }
+            }
+            
+            select {
+                cursor: pointer;
+            }
+            
+            input[type="password"] {
+                font-family: monospace;
+            }
+        }
     }
 } 
