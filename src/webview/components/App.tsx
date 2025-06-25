@@ -6,6 +6,10 @@ import SelectedFiles from './SelectedFiles';
 import ResponseSection from './ResponseSection';
 import LoadingOverlay from './LoadingOverlay';
 import ApiSettings from './ApiSettings';
+import TemplateManager from './TemplateManager';
+import TemplateEditor from './TemplateEditor';
+import PromptPreview from './PromptPreview';
+import { PromptTemplate } from '../../types/ApiTypes';
 
 // Получаем API VSCode
 declare const acquireVsCodeApi: () => VSCodeAPI;
@@ -35,6 +39,13 @@ const App: React.FC = () => {
     const [response, setResponse] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [apiSettingsExpanded, setApiSettingsExpanded] = useState<boolean>(false);
+    
+    // Состояние для шаблонов
+    const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
+    const [editingTemplate, setEditingTemplate] = useState<PromptTemplate | null>(null);
+    const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState<boolean>(false);
+    const [previewTemplate, setPreviewTemplate] = useState<PromptTemplate | null>(null);
+    const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
 
     useEffect(() => {
         // Запросить дерево файлов при загрузке
@@ -170,7 +181,46 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSubmit = () => {
+    // Обработчики для шаблонов
+    const handleTemplateSelect = (template: PromptTemplate | null) => {
+        setSelectedTemplate(template);
+    };
+
+    const handleTemplateEdit = (template: PromptTemplate | null) => {
+        setEditingTemplate(template);
+        setIsTemplateEditorOpen(true);
+    };
+
+    const handleTemplateSave = (template: PromptTemplate) => {
+        // Сохраняем шаблон в localStorage
+        const savedTemplates = localStorage.getItem('shotgun_templates');
+        let templates = savedTemplates ? JSON.parse(savedTemplates) : [];
+        
+        const existingIndex = templates.findIndex((t: PromptTemplate) => t.id === template.id);
+        if (existingIndex >= 0) {
+            templates[existingIndex] = template;
+        } else {
+            templates.push(template);
+        }
+        
+        localStorage.setItem('shotgun_templates', JSON.stringify(templates));
+        setIsTemplateEditorOpen(false);
+        setEditingTemplate(null);
+    };
+
+    const handleTemplatePreview = (template: PromptTemplate) => {
+        setPreviewTemplate(template);
+        setIsPreviewOpen(true);
+    };
+
+    const handleUseTemplate = () => {
+        if (previewTemplate && prompt.trim() && selectedFiles.size > 0) {
+            handleSubmitWithTemplate(previewTemplate);
+        }
+        setIsPreviewOpen(false);
+    };
+
+    const handleSubmitWithTemplate = (template: PromptTemplate) => {
         if (!prompt.trim() || selectedFiles.size === 0) return;
         
         const filesArray: SelectedFile[] = Array.from(selectedFiles.entries()).map(([path, content]) => ({
@@ -178,16 +228,51 @@ const App: React.FC = () => {
             content
         }));
         
+        // Формируем итоговый промпт из шаблона
+        const filesContent = filesArray
+            .map(file => `\n\n--- ${file.path} ---\n${file.content}`)
+            .join('\n');
+
+        const processedUserPrompt = template.userPrompt
+            .replace(/\{\{ЗАДАЧА\}\}/g, prompt)
+            .replace(/\{\{FILES\}\}/g, filesContent);
+
+        const finalPrompt = `${template.systemPrompt}\n\n---\n\n${processedUserPrompt}`;
+        
         // Получаем настройки API из localStorage
         const apiConfig = localStorage.getItem('shotgun_api_config');
         const config = apiConfig ? JSON.parse(apiConfig) : { provider: 'gemini' };
         
         vscode.postMessage({
             type: 'submitToAI',
-            prompt: prompt,
+            prompt: finalPrompt,
             selectedFiles: filesArray,
             apiConfig: config
         });
+    };
+
+    const handleSubmit = () => {
+        if (!prompt.trim() || selectedFiles.size === 0) return;
+        
+        if (selectedTemplate) {
+            handleSubmitWithTemplate(selectedTemplate);
+        } else {
+            const filesArray: SelectedFile[] = Array.from(selectedFiles.entries()).map(([path, content]) => ({
+                path,
+                content
+            }));
+            
+            // Получаем настройки API из localStorage
+            const apiConfig = localStorage.getItem('shotgun_api_config');
+            const config = apiConfig ? JSON.parse(apiConfig) : { provider: 'gemini' };
+            
+            vscode.postMessage({
+                type: 'submitToAI',
+                prompt: prompt,
+                selectedFiles: filesArray,
+                apiConfig: config
+            });
+        }
     };
 
     const handleClear = () => {
@@ -195,6 +280,7 @@ const App: React.FC = () => {
         setCheckedFiles(new Set());
         setPrompt('');
         setResponse('');
+        setSelectedTemplate(null);
         
         // Очищаем состояние файлового дерева
         const emptyState = {
@@ -242,6 +328,13 @@ const App: React.FC = () => {
                     onToggle={() => setApiSettingsExpanded(!apiSettingsExpanded)}
                 />
                 
+                <TemplateManager
+                    selectedTemplate={selectedTemplate}
+                    onTemplateSelect={handleTemplateSelect}
+                    onTemplateEdit={handleTemplateEdit}
+                    onTemplatePreview={handleTemplatePreview}
+                />
+                
                 <PromptSection 
                     prompt={prompt}
                     onPromptChange={setPrompt}
@@ -275,6 +368,30 @@ const App: React.FC = () => {
             </div>
             
             {isLoading && <LoadingOverlay />}
+            
+            <TemplateEditor
+                template={editingTemplate}
+                isOpen={isTemplateEditorOpen}
+                onClose={() => {
+                    setIsTemplateEditorOpen(false);
+                    setEditingTemplate(null);
+                }}
+                onSave={handleTemplateSave}
+            />
+            
+            <PromptPreview
+                template={previewTemplate}
+                userInput={prompt}
+                filesContent={Array.from(selectedFiles.entries())
+                    .map(([path, content]) => `\n\n--- ${path} ---\n${content}`)
+                    .join('\n')}
+                isOpen={isPreviewOpen}
+                onClose={() => {
+                    setIsPreviewOpen(false);
+                    setPreviewTemplate(null);
+                }}
+                onUseTemplate={handleUseTemplate}
+            />
         </div>
     );
 };

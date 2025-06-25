@@ -19,4 +19,19 @@ export interface ApiResponse {
 export interface SelectedFile {
     path: string;
     content: string;
+}
+
+// Типы для системы шаблонов
+export type TemplateCategory = 'code-editing' | 'improvement-plan' | 'refactoring-plan' | 'custom';
+
+export interface PromptTemplate {
+    id: string;
+    name: string;
+    description: string;
+    systemPrompt: string;
+    userPrompt: string;
+    category: TemplateCategory;
+    isBuiltIn: boolean;
+    createdAt: Date;
+    updatedAt: Date;
 } 
