@@ -1,0 +1,45 @@
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    
+    &__content {
+        background: var(--vscode-background);
+        border: 1px solid var(--vscode-input-border);
+        border-radius: var(--border-radius);
+        padding: var(--spacing-xxl);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-md);
+        min-width: 200px;
+    }
+    
+    &__text {
+        margin: 0;
+        color: var(--vscode-foreground);
+        font-size: 14px;
+        text-align: center;
+    }
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--vscode-input-border);
+    border-top: 2px solid var(--vscode-button-background);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+} 

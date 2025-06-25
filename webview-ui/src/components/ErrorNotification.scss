@@ -1,0 +1,61 @@
+.error-notification {
+    position: fixed;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    z-index: 1001;
+    animation: slideIn 0.3s ease-out;
+    
+    &__content {
+        background: var(--vscode-inputValidation-errorBackground, #5a1d1d);
+        border: 1px solid var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+        border-radius: var(--border-radius);
+        padding: var(--spacing-md);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        max-width: 400px;
+        min-width: 300px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    &__icon {
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+    
+    &__message {
+        flex: 1;
+        color: var(--vscode-inputValidation-errorForeground, var(--vscode-errorForeground));
+        font-size: 13px;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+    
+    &__close {
+        background: none;
+        border: none;
+        color: var(--vscode-inputValidation-errorForeground, var(--vscode-errorForeground));
+        cursor: pointer;
+        padding: var(--spacing-xs);
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+} 
