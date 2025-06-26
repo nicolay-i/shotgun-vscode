@@ -1,16 +1,22 @@
 import * as vscode from 'vscode';
 import { ShotgunPanel } from './ShotgunPanel';
 
+/**
+ * Активация расширения
+ * @param context Контекст расширения VS Code
+ */
 export function activate(context: vscode.ExtensionContext) {
-    // Команда для открытия панели
-    const openPanelCommand = vscode.commands.registerCommand(
-        'ai-assistant.openPanel',
-        () => {
-            ShotgunPanel.createOrShow(context.extensionUri);
-        }
-    );
+    // Регистрируем команду для открытия панели
+    const disposable = vscode.commands.registerCommand('ai-assistant.openPanel', () => {
+        ShotgunPanel.createOrShow(context.extensionUri, context);
+    });
 
-    context.subscriptions.push(openPanelCommand);
+    context.subscriptions.push(disposable);
 }
 
-export function deactivate() {} 
+/**
+ * Деактивация расширения
+ */
+export function deactivate() {
+    // Очистка ресурсов при необходимости
+} 

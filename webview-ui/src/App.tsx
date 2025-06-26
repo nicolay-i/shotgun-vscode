@@ -13,7 +13,7 @@ import { ErrorNotification } from './components/ErrorNotification';
 import './styles/App.scss';
 
 const AppContent: React.FC = observer(() => {
-    const { appStore, fileStore } = rootStore;
+    const { appStore, fileStore, apiStore } = rootStore;
 
     const handleFileOpen = (filePath: string) => {
         appStore.sendMessage({ 
@@ -53,6 +53,9 @@ const AppContent: React.FC = observer(() => {
                     appStore.setLoading(false);
                     rootStore.promptStore.setSubmitting(false);
                     break;
+                case 'secretsLoaded':
+                    apiStore.handleMessage(message);
+                    break;
             }
         };
 
@@ -61,7 +64,7 @@ const AppContent: React.FC = observer(() => {
         return () => {
             window.removeEventListener('message', handleMessage);
         };
-    }, [appStore, fileStore]);
+    }, [appStore, fileStore, apiStore]);
 
     return (
         <div className="app">

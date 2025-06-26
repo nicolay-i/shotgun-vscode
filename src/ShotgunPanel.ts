@@ -1,15 +1,34 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { ApiService } from './ApiService';
+import { IFileSystemService } from './services/IFileSystemService';
+import { FileSystemService } from './services/FileSystemService';
+import { ISecretStorageService } from './services/ISecretStorageService';
+import { VsCodeSecretStorageService } from './services/VsCodeSecretStorageService';
 import { 
-    FileNode, 
     Message, 
     GetFileContentMessage, 
     OpenFileMessage, 
     SubmitToAIMessage, 
-    SaveResponseMessage 
+    SaveResponseMessage,
+    ApiProvider 
 } from './types';
+
+/**
+ * Сообщения для работы с секретами
+ */
+interface StoreSecretMessage extends Message {
+    type: 'storeSecret';
+    data: {
+        key: string;
+        value: string;
+    };
+}
+
+interface LoadSecretsMessage extends Message {
+    type: 'loadSecrets';
+    data: {};
+}
 
 export class ShotgunPanel {
     public static currentPanel: ShotgunPanel | undefined;
@@ -19,8 +38,10 @@ export class ShotgunPanel {
     private readonly _extensionUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
     private readonly _apiService: ApiService;
+    private readonly _fileSystemService: IFileSystemService;
+    private readonly _secretStorageService: ISecretStorageService;
 
-    public static createOrShow(extensionUri: vscode.Uri) {
+    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
@@ -45,13 +66,19 @@ export class ShotgunPanel {
             }
         );
 
-        ShotgunPanel.currentPanel = new ShotgunPanel(panel, extensionUri);
+        ShotgunPanel.currentPanel = new ShotgunPanel(panel, extensionUri, context);
     }
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+    private constructor(
+        panel: vscode.WebviewPanel, 
+        extensionUri: vscode.Uri, 
+        context: vscode.ExtensionContext
+    ) {
         this._panel = panel;
         this._extensionUri = extensionUri;
         this._apiService = new ApiService();
+        this._fileSystemService = new FileSystemService();
+        this._secretStorageService = new VsCodeSecretStorageService(context);
 
         // Устанавливаем HTML содержимое
         this._setWebviewHtml();
@@ -61,6 +88,9 @@ export class ShotgunPanel {
 
         // Убираем панель когда пользователь закрывает её
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // Загружаем секреты при создании панели
+        this._loadAndSendSecrets();
     }
 
     private _setWebviewHtml() {
@@ -129,6 +159,12 @@ export class ShotgunPanel {
             case 'saveResponse':
                 await this._handleSaveResponse(message as SaveResponseMessage);
                 break;
+            case 'storeSecret':
+                await this._handleStoreSecret(message as StoreSecretMessage);
+                break;
+            case 'loadSecrets':
+                await this._handleLoadSecrets(message as LoadSecretsMessage);
+                break;
             default:
                 console.warn(`Неизвестный тип сообщения: ${message.type}`);
         }
@@ -145,7 +181,7 @@ export class ShotgunPanel {
         }
 
         const rootPath = workspaceFolders[0].uri.fsPath;
-        const fileTree = await this._buildFileTree(rootPath);
+        const fileTree = await this._fileSystemService.buildFileTree(rootPath);
         
         this._panel.webview.postMessage({
             type: 'fileTree',
@@ -153,184 +189,155 @@ export class ShotgunPanel {
         });
     }
 
-    private async _buildFileTree(dirPath: string, relativePath = ''): Promise<FileNode[]> {
-        const items: FileNode[] = [];
-        
-        try {
-            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-            
-            for (const entry of entries) {
-                // Игнорируем системные и нерелевантные директории
-                if (this._shouldIgnore(entry.name)) {
-                    continue;
-                }
-
-                const fullPath = path.join(dirPath, entry.name);
-                const itemRelativePath = path.join(relativePath, entry.name);
-
-                if (entry.isDirectory()) {
-                    const children = await this._buildFileTree(fullPath, itemRelativePath);
-                    items.push({
-                        name: entry.name,
-                        path: itemRelativePath,
-                        type: 'directory',
-                        children,
-                        isExpanded: false
-                    });
-                } else if (entry.isFile() && this._isTextFile(entry.name)) {
-                    items.push({
-                        name: entry.name,
-                        path: itemRelativePath,
-                        type: 'file'
-                    });
-                }
-            }
-        } catch (error) {
-            console.error(`Ошибка чтения директории ${dirPath}:`, error);
-        }
-
-        return items.sort((a, b) => {
-            // Сначала папки, потом файлы
-            if (a.type !== b.type) {
-                return a.type === 'directory' ? -1 : 1;
-            }
-            return a.name.localeCompare(b.name);
-        });
-    }
-
-    private _shouldIgnore(name: string): boolean {
-        const ignorePatterns = [
-            '.git',
-            'node_modules',
-            'out',
-            'dist',
-            'build',
-            '.vscode',
-            '.idea',
-            '.vs',
-            '*.log',
-            '.DS_Store',
-            'Thumbs.db'
-        ];
-
-        return ignorePatterns.some(pattern => {
-            if (pattern.startsWith('.')) {
-                return name.startsWith(pattern);
-            }
-            if (pattern.includes('*')) {
-                const regex = new RegExp(pattern.replace('*', '.*'));
-                return regex.test(name);
-            }
-            return name === pattern;
-        });
-    }
-
-    private _isTextFile(fileName: string): boolean {
-        const textExtensions = [
-            '.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.txt',
-            '.html', '.css', '.scss', '.sass', '.less',
-            '.py', '.java', '.cs', '.cpp', '.c', '.h',
-            '.php', '.rb', '.go', '.rs', '.swift',
-            '.xml', '.yaml', '.yml', '.toml', '.ini',
-            '.sh', '.bat', '.ps1', '.sql', '.prisma', '.env.example', '.env.local', '.env.development'
-        ];
-
-        return textExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
-    }
-
     private async _handleGetFileContent(message: GetFileContentMessage) {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
-            throw new Error('Воркспейс не открыт');
+            throw new Error('Рабочая папка не открыта');
         }
 
         const rootPath = workspaceFolders[0].uri.fsPath;
         const fullPath = path.join(rootPath, message.data.filePath);
-
-        try {
-            const content = await fs.promises.readFile(fullPath, 'utf-8');
-            this._panel.webview.postMessage({
-                type: 'fileContent',
-                data: {
-                    path: message.data.filePath,
-                    content
-                }
-            });
-        } catch (error: any) {
-            throw new Error(`Ошибка чтения файла ${message.data.filePath}: ${error.message}`);
-        }
+        
+        const content = await this._fileSystemService.readFileContent(fullPath);
+        
+        this._panel.webview.postMessage({
+            type: 'fileContent',
+            data: {
+                path: message.data.filePath,
+                content
+            }
+        });
     }
 
     private async _handleOpenFile(message: OpenFileMessage) {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
-            throw new Error('Воркспейс не открыт');
+            throw new Error('Рабочая папка не открыта');
         }
 
         const rootPath = workspaceFolders[0].uri.fsPath;
         const fullPath = path.join(rootPath, message.data.filePath);
-        const uri = vscode.Uri.file(fullPath);
-
-        try {
-            await vscode.window.showTextDocument(uri);
-        } catch (error: any) {
-            throw new Error(`Ошибка открытия файла ${message.data.filePath}: ${error.message}`);
-        }
+        const document = await vscode.workspace.openTextDocument(fullPath);
+        
+        await vscode.window.showTextDocument(document);
     }
 
     private async _handleSubmitToAI(message: SubmitToAIMessage) {
-        this._panel.webview.postMessage({ type: 'loadingStart' });
+        const { prompt, selectedFiles, apiConfig, template } = message.data;
+
+        // Показываем индикатор загрузки
+        this._panel.webview.postMessage({
+            type: 'loadingStart'
+        });
 
         try {
-            // Загружаем содержимое файлов
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                throw new Error('Рабочая папка не открыта');
+            }
+
+            const rootPath = workspaceFolders[0].uri.fsPath;
+            
+            // Параллельно читаем содержимое всех выбранных файлов
             const filesWithContent = await Promise.all(
-                message.data.selectedFiles.map(async (file) => {
-                    if (!file.content) {
-                        const workspaceFolders = vscode.workspace.workspaceFolders;
-                        if (workspaceFolders) {
-                            const rootPath = workspaceFolders[0].uri.fsPath;
-                            const fullPath = path.join(rootPath, file.path);
-                            const content = await fs.promises.readFile(fullPath, 'utf-8');
-                            return { ...file, content };
-                        }
-                    }
-                    return file;
+                selectedFiles.map(async (file) => {
+                    const fullPath = path.join(rootPath, file.path);
+                    const content = await this._fileSystemService.readFileContent(fullPath);
+                    return { ...file, content };
                 })
             );
 
             const response = await this._apiService.sendRequest(
-                message.data.prompt,
+                prompt,
                 filesWithContent,
-                message.data.apiConfig,
-                message.data.template
+                apiConfig,
+                template
             );
 
             this._panel.webview.postMessage({
                 type: 'aiResponse',
                 data: response
             });
+        } catch (error: any) {
+            throw error;
         } finally {
-            this._panel.webview.postMessage({ type: 'loadingEnd' });
+            // Скрываем индикатор загрузки
+            this._panel.webview.postMessage({
+                type: 'loadingEnd'
+            });
         }
     }
 
     private async _handleSaveResponse(message: SaveResponseMessage) {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-            throw new Error('Воркспейс не открыт');
-        }
-
-        const rootPath = workspaceFolders[0].uri.fsPath;
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
-        const fileName = `ai-response-${timestamp}.md`;
-        const fullPath = path.join(rootPath, fileName);
-
         try {
-            await fs.promises.writeFile(fullPath, message.data.content, 'utf-8');
-            const uri = vscode.Uri.file(fullPath);
-            await vscode.window.showTextDocument(uri);
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                throw new Error('Рабочая папка не открыта');
+            }
+
+            const rootPath = workspaceFolders[0].uri.fsPath;
+            const plansDir = path.join(rootPath, 'plans');
+            
+            // Создаем папку plans если её нет
+            await this._fileSystemService.ensureDirectory(plansDir);
+
+            // Формируем имя файла с шаблоном и timestamp
+            const timestamp = new Date().toISOString()
+                .replace(/[:.]/g, '-')  // Заменяем недопустимые символы
+                .replace('T', '_')      // Заменяем T на _
+                .slice(0, 19);          // Убираем миллисекунды и Z
+
+            const templatePart = message.data.templateName 
+                ? `${message.data.templateName}_` 
+                : 'no-template_';
+            
+            const fileName = `${templatePart}${timestamp}.md`;
+            const fullPath = path.join(plansDir, fileName);
+
+            // Сохраняем файл
+            await this._fileSystemService.saveFile(fullPath, message.data.content);
+
+            // Открываем файл для просмотра
+            const document = await vscode.workspace.openTextDocument(fullPath);
+            await vscode.window.showTextDocument(document);
+
+            // Показываем уведомление об успешном сохранении
+            vscode.window.showInformationMessage(`Ответ сохранен в файл: plans/${fileName}`);
         } catch (error: any) {
-            throw new Error(`Ошибка сохранения файла: ${error.message}`);
+            vscode.window.showErrorMessage(`Ошибка сохранения файла: ${error.message}`);
+        }
+    }
+
+    private async _handleStoreSecret(message: StoreSecretMessage) {
+        try {
+            await this._secretStorageService.store(message.data.key, message.data.value);
+        } catch (error: any) {
+            console.warn('Ошибка сохранения секрета:', error);
+        }
+    }
+
+    private async _handleLoadSecrets(_message: LoadSecretsMessage) {
+        await this._loadAndSendSecrets();
+    }
+
+    private async _loadAndSendSecrets() {
+        try {
+            const secrets: Partial<Record<ApiProvider, string>> = {};
+            
+            // Загружаем API ключи для всех провайдеров
+            for (const provider of Object.values(ApiProvider)) {
+                const key = await this._secretStorageService.get(`ai-assistant.apiKey.${provider}`);
+                if (key) {
+                    secrets[provider] = key;
+                }
+            }
+
+            this._panel.webview.postMessage({
+                type: 'secretsLoaded',
+                data: secrets
+            });
+        } catch (error: any) {
+            console.warn('Ошибка загрузки секретов:', error);
         }
     }
 
@@ -345,13 +352,13 @@ export class ShotgunPanel {
 
     public dispose() {
         ShotgunPanel.currentPanel = undefined;
-        
+
         this._panel.dispose();
-        
+
         while (this._disposables.length) {
-            const disposable = this._disposables.pop();
-            if (disposable) {
-                disposable.dispose();
+            const x = this._disposables.pop();
+            if (x) {
+                x.dispose();
             }
         }
     }

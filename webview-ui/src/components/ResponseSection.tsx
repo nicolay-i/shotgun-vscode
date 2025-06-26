@@ -1,18 +1,20 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
-import { usePromptStore, useAppStore } from '../contexts/StoreContext';
+import { usePromptStore, useAppStore, useTemplateStore } from '../contexts/StoreContext';
 import { FloppyDisk, Copy } from 'phosphor-react';
 
 export const ResponseSection: React.FC = observer(() => {
     const promptStore = usePromptStore();
     const appStore = useAppStore();
+    const templateStore = useTemplateStore();
 
     const handleSaveResponse = () => {
         if (promptStore.aiResponse) {
             appStore.sendMessage({
                 type: 'saveResponse',
                 data: {
-                    content: promptStore.aiResponse
+                    content: promptStore.aiResponse,
+                    templateName: templateStore.selectedTemplate?.name
                 }
             });
         }
@@ -56,7 +58,7 @@ export const ResponseSection: React.FC = observer(() => {
                     <button
                         className="btn btn--secondary btn--small"
                         onClick={handleSaveResponse}
-                        title="Сохранить ответ в файл"
+                        title="Сохранить ответ в папку plans"
                     >
                         <FloppyDisk size={14} />
                         Сохранить

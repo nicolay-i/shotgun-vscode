@@ -1,6 +1,11 @@
 import { makeAutoObservable, action } from 'mobx';
 
-export type ApiProvider = 'gemini' | 'openai' | 'openrouter' | 'custom';
+export enum ApiProvider {
+    Gemini = 'gemini',
+    OpenAI = 'openai',
+    OpenRouter = 'openrouter',
+    Custom = 'custom'
+}
 
 export interface ApiConfig {
     provider: ApiProvider;
@@ -10,19 +15,19 @@ export interface ApiConfig {
 }
 
 export class ApiStore {
-    currentProvider: ApiProvider = 'gemini';
+    currentProvider: ApiProvider = ApiProvider.Gemini;
     apiKeys: Record<ApiProvider, string> = {
-        gemini: '',
-        openai: '',
-        openrouter: '',
-        custom: ''
+        [ApiProvider.Gemini]: '',
+        [ApiProvider.OpenAI]: '',
+        [ApiProvider.OpenRouter]: '',
+        [ApiProvider.Custom]: ''
     };
     customUrl: string = '';
     models: Record<ApiProvider, string> = {
-        gemini: 'gemini-1.5-pro',
-        openai: 'gpt-4',
-        openrouter: 'anthropic/claude-3-sonnet',
-        custom: 'gpt-3.5-turbo'
+        [ApiProvider.Gemini]: 'gemini-1.5-pro',
+        [ApiProvider.OpenAI]: 'gpt-4',
+        [ApiProvider.OpenRouter]: 'anthropic/claude-3-sonnet',
+        [ApiProvider.Custom]: 'gpt-3.5-turbo'
     };
 
     constructor() {
@@ -44,6 +49,9 @@ export class ApiStore {
     setApiKey(provider: ApiProvider, key: string) {
         this.apiKeys[provider] = key;
         this.savePersistedState();
+        
+        // Отправляем сообщение в extension для сохранения в SecretStorage
+        this.requestSecretStorage(provider, key);
     }
 
     setCustomUrl(url: string) {
@@ -68,11 +76,51 @@ export class ApiStore {
     get isConfigValid(): boolean {
         const config = this.currentApiConfig;
         if (!config.apiKey) return false;
-        if (config.provider === 'custom' && !config.customUrl) return false;
+        if (config.provider === ApiProvider.Custom && !config.customUrl) return false;
         return true;
     }
 
-    // Простейшее "шифрование" для localStorage (base64)
+    /**
+     * Запрашивает сохранение API ключа в безопасном хранилище VS Code
+     * @param provider Провайдер API
+     * @param key API ключ
+     */
+    private requestSecretStorage(provider: ApiProvider, key: string) {
+        const vsCodeApi = (window as any).vscode;
+        if (vsCodeApi) {
+            vsCodeApi.postMessage({
+                type: 'storeSecret',
+                data: {
+                    key: `ai-assistant.apiKey.${provider}`,
+                    value: key
+                }
+            });
+        }
+    }
+
+    /**
+     * Загружает API ключи из безопасного хранилища
+     * @param secrets Объект с секретами из VS Code
+     */
+    loadSecretsFromVsCode(secrets: Partial<Record<ApiProvider, string>>) {
+        Object.entries(secrets).forEach(([provider, key]) => {
+            if (key && Object.values(ApiProvider).includes(provider as ApiProvider)) {
+                this.apiKeys[provider as ApiProvider] = key;
+            }
+        });
+    }
+
+    /**
+     * Обрабатывает сообщения от VS Code Extension
+     * @param message Сообщение от extension
+     */
+    handleMessage(message: any) {
+        if (message.type === 'secretsLoaded') {
+            this.loadSecretsFromVsCode(message.data);
+        }
+    }
+
+    // Простейшее "шифрование" для localStorage (base64) - только для некритичных данных
     private encryptKey(key: string): string {
         if (!key) return '';
         return btoa(key);
@@ -90,12 +138,7 @@ export class ApiStore {
     private savePersistedState() {
         const state = {
             currentProvider: this.currentProvider,
-            apiKeys: {
-                gemini: this.encryptKey(this.apiKeys.gemini),
-                openai: this.encryptKey(this.apiKeys.openai),
-                openrouter: this.encryptKey(this.apiKeys.openrouter),
-                custom: this.encryptKey(this.apiKeys.custom),
-            },
+            // Больше не сохраняем API ключи в localStorage - они идут в SecretStorage
             customUrl: this.customUrl,
             models: this.models
         };
@@ -108,17 +151,8 @@ export class ApiStore {
             if (saved) {
                 const state = JSON.parse(saved);
                 
-                if (state.currentProvider) {
+                if (state.currentProvider && Object.values(ApiProvider).includes(state.currentProvider)) {
                     this.currentProvider = state.currentProvider;
-                }
-                
-                if (state.apiKeys) {
-                    this.apiKeys = {
-                        gemini: this.decryptKey(state.apiKeys.gemini || ''),
-                        openai: this.decryptKey(state.apiKeys.openai || ''),
-                        openrouter: this.decryptKey(state.apiKeys.openrouter || ''),
-                        custom: this.decryptKey(state.apiKeys.custom || ''),
-                    };
                 }
                 
                 if (state.customUrl) {
@@ -128,28 +162,60 @@ export class ApiStore {
                 if (state.models) {
                     this.models = { ...this.models, ...state.models };
                 }
+
+                // Если есть старые ключи в localStorage, переносим их в SecretStorage и удаляем
+                if (state.apiKeys) {
+                    Object.entries(state.apiKeys).forEach(([provider, encryptedKey]) => {
+                        if (encryptedKey && typeof encryptedKey === 'string') {
+                            const decryptedKey = this.decryptKey(encryptedKey);
+                            if (decryptedKey && Object.values(ApiProvider).includes(provider as ApiProvider)) {
+                                this.requestSecretStorage(provider as ApiProvider, decryptedKey);
+                            }
+                        }
+                    });
+                    
+                    // Удаляем ключи из localStorage после переноса
+                    delete state.apiKeys;
+                    localStorage.setItem('apiStore', JSON.stringify(state));
+                }
             }
+
+            // Запрашиваем загрузку секретов из VS Code
+            this.requestSecretsLoad();
         } catch (error) {
             console.warn('Ошибка загрузки состояния ApiStore:', error);
+        }
+    }
+
+    /**
+     * Запрашивает загрузку секретов из VS Code SecretStorage
+     */
+    private requestSecretsLoad() {
+        const vsCodeApi = (window as any).vscode;
+        if (vsCodeApi) {
+            vsCodeApi.postMessage({
+                type: 'loadSecrets',
+                data: {}
+            });
         }
     }
 
     // Предустановленные модели для каждого провайдера
     getAvailableModels(provider: ApiProvider): string[] {
         switch (provider) {
-            case 'gemini':
+            case ApiProvider.Gemini:
                 return [
                     'gemini-1.5-pro',
                     'gemini-1.5-flash',
                     'gemini-pro'
                 ];
-            case 'openai':
+            case ApiProvider.OpenAI:
                 return [
                     'gpt-4',
                     'gpt-4-turbo',
                     'gpt-3.5-turbo'
                 ];
-            case 'openrouter':
+            case ApiProvider.OpenRouter:
                 return [
                     'anthropic/claude-3-sonnet',
                     'anthropic/claude-3-haiku',
@@ -157,7 +223,7 @@ export class ApiStore {
                     'openai/gpt-3.5-turbo',
                     'meta-llama/llama-3-70b-instruct'
                 ];
-            case 'custom':
+            case ApiProvider.Custom:
                 return [
                     'gpt-3.5-turbo',
                     'gpt-4',

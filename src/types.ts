@@ -14,7 +14,12 @@ export interface SelectedFile {
 }
 
 // Типы для API
-export type ApiProvider = 'gemini' | 'openai' | 'openrouter' | 'custom';
+export enum ApiProvider {
+    Gemini = 'gemini',
+    OpenAI = 'openai',
+    OpenRouter = 'openrouter',
+    Custom = 'custom'
+}
 
 export interface ApiConfig {
     provider: ApiProvider;
@@ -71,6 +76,7 @@ export interface SaveResponseMessage extends Message {
     type: 'saveResponse';
     data: {
         content: string;
+        templateName?: string;
     };
 }
 

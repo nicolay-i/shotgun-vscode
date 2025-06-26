@@ -46,7 +46,7 @@
     "compile": "tsc -p ./ && pnpm run build:webview",
     "watch": "tsc -watch -p ./",
     "pretest": "pnpm run compile",
-    "test": "node ./out/test/runTest.js",
+
     "build:webview": "webpack --mode=production",
     "dev:webview": "webpack --mode=development --watch",
     "package": "vsce package",
@@ -55,6 +55,7 @@
   "devDependencies": {
     "@types/vscode": "^1.85.0",
     "@types/node": "^20.x",
+
     "typescript": "^5.3.0",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4",
