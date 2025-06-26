@@ -288,7 +288,7 @@ body {
     }
 
     &__clear {
-        background: none;
+        background: var(--vscode-button-background);
         border: 1px solid var(--vscode-button-border);
         color: var(--vscode-button-foreground);
         padding: 2px 8px;
