@@ -15,6 +15,13 @@ import './styles/App.scss';
 const AppContent: React.FC = observer(() => {
     const { appStore, fileStore } = rootStore;
 
+    const handleFileOpen = (filePath: string) => {
+        appStore.sendMessage({ 
+            type: 'openFile', 
+            data: { filePath }
+        });
+    };
+
     useEffect(() => {
         // Инициализация - запрашиваем дерево файлов
         appStore.sendMessage({ type: 'getFiles' });
@@ -63,7 +70,7 @@ const AppContent: React.FC = observer(() => {
                 <div className="app__sidebar">
                     <div className="app__section">
                         <h3 className="app__section-title">Файлы проекта</h3>
-                        <FileTree />
+                        <FileTree onFileOpen={handleFileOpen} />
                     </div>
                 </div>
 

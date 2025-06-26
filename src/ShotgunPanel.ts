@@ -232,7 +232,7 @@ export class ShotgunPanel {
             '.py', '.java', '.cs', '.cpp', '.c', '.h',
             '.php', '.rb', '.go', '.rs', '.swift',
             '.xml', '.yaml', '.yml', '.toml', '.ini',
-            '.sh', '.bat', '.ps1', '.sql'
+            '.sh', '.bat', '.ps1', '.sql', '.prisma', '.env.example', '.env.local', '.env.development'
         ];
 
         return textExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
