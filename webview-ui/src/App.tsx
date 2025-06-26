@@ -10,6 +10,7 @@ import { SelectedFiles } from './components/SelectedFiles';
 import { ResponseSection } from './components/ResponseSection';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { ErrorNotification } from './components/ErrorNotification';
+import { PromptPreviewModal } from './components/PromptPreviewModal';
 import './styles/App.scss';
 
 const AppContent: React.FC = observer(() => {
@@ -23,12 +24,15 @@ const AppContent: React.FC = observer(() => {
     };
 
     useEffect(() => {
+        console.log('[App] useEffect инициализация...');
+        
         // Инициализация - запрашиваем дерево файлов
         appStore.sendMessage({ type: 'getFiles' });
 
         // Слушаем сообщения от VS Code Extension
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
+            console.log('[App] Получено сообщение от VS Code:', message.type, message);
             
             switch (message.type) {
                 case 'fileTree':
@@ -54,14 +58,19 @@ const AppContent: React.FC = observer(() => {
                     rootStore.promptStore.setSubmitting(false);
                     break;
                 case 'secretsLoaded':
+                    console.log('[App] Обрабатываем secretsLoaded:', message.data);
                     apiStore.handleMessage(message);
                     break;
+                default:
+                    console.log('[App] Неизвестный тип сообщения:', message.type);
             }
         };
 
+        console.log('[App] Добавляем обработчик сообщений...');
         window.addEventListener('message', handleMessage);
         
         return () => {
+            console.log('[App] Удаляем обработчик сообщений...');
             window.removeEventListener('message', handleMessage);
         };
     }, [appStore, fileStore, apiStore]);
@@ -109,6 +118,7 @@ const AppContent: React.FC = observer(() => {
             {/* Оверлеи */}
             {appStore.isLoading && <LoadingOverlay />}
             {appStore.error && <ErrorNotification />}
+            <PromptPreviewModal />
         </div>
     );
 });

@@ -12,11 +12,18 @@ export class RootStore {
     promptStore: PromptStore;
 
     constructor() {
+        console.log('[RootStore] Инициализация RootStore...');
+        
         this.appStore = new AppStore();
         this.fileStore = new FileStore();
         this.apiStore = new ApiStore();
         this.templateStore = new TemplateStore();
         this.promptStore = new PromptStore();
+        
+        // Устанавливаем ссылку на AppStore в ApiStore
+        this.apiStore.setAppStore(this.appStore);
+        
+        console.log('[RootStore] RootStore инициализирован');
     }
 }
 

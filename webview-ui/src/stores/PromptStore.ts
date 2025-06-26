@@ -4,6 +4,7 @@ export class PromptStore {
     currentPrompt: string = '';
     aiResponse: string = '';
     isSubmitting: boolean = false;
+    isPreviewModalOpen: boolean = false;
 
     constructor() {
         makeAutoObservable(this, {
@@ -12,7 +13,8 @@ export class PromptStore {
             setSubmitting: action,
             clearPrompt: action,
             clearResponse: action,
-            clearAll: action
+            clearAll: action,
+            setPreviewModalOpen: action
         });
 
         this.loadPersistedState();
@@ -29,6 +31,10 @@ export class PromptStore {
 
     setSubmitting(submitting: boolean) {
         this.isSubmitting = submitting;
+    }
+
+    setPreviewModalOpen(open: boolean) {
+        this.isPreviewModalOpen = open;
     }
 
     clearPrompt() {

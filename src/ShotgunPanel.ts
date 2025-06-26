@@ -310,7 +310,9 @@ export class ShotgunPanel {
 
     private async _handleStoreSecret(message: StoreSecretMessage) {
         try {
+            console.log(`Сохраняем секрет: ${message.data.key} = ${message.data.value.substring(0, 8)}...`);
             await this._secretStorageService.store(message.data.key, message.data.value);
+            console.log(`Секрет сохранен успешно: ${message.data.key}`);
         } catch (error: any) {
             console.warn('Ошибка сохранения секрета:', error);
         }
@@ -324,14 +326,21 @@ export class ShotgunPanel {
         try {
             const secrets: Partial<Record<ApiProvider, string>> = {};
             
+            console.log('Загружаем секреты из VS Code SecretStorage...');
+            
             // Загружаем API ключи для всех провайдеров
             for (const provider of Object.values(ApiProvider)) {
                 const key = await this._secretStorageService.get(`ai-assistant.apiKey.${provider}`);
                 if (key) {
                     secrets[provider] = key;
+                    console.log(`Найден ключ для ${provider}: ${key.substring(0, 8)}...`);
+                } else {
+                    console.log(`Ключ для ${provider} не найден`);
                 }
             }
 
+            console.log('Отправляем секреты в webview:', Object.keys(secrets));
+            
             this._panel.webview.postMessage({
                 type: 'secretsLoaded',
                 data: secrets

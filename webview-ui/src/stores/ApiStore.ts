@@ -29,14 +29,36 @@ export class ApiStore {
         [ApiProvider.OpenRouter]: 'anthropic/claude-3-sonnet',
         [ApiProvider.Custom]: 'gpt-3.5-turbo'
     };
+    
+    // Флаг для отслеживания загрузки секретов
+    private secretsLoaded: boolean = false;
+    
+    // Очередь действий, ожидающих загрузки секретов
+    private pendingSecretRequests: (() => void)[] = [];
+    
+    // Ссылка на AppStore для отправки сообщений
+    private appStore: any = null;
 
-    constructor() {
+    constructor(appStore?: any) {
         makeAutoObservable(this, {
             setProvider: action,
             setApiKey: action,
             setCustomUrl: action,
-            setModel: action
+            setModel: action,
+            loadSecretsFromVsCode: action
         });
+
+        console.log('[ApiStore] Инициализация ApiStore...');
+        
+        this.appStore = appStore;
+        
+        // Проверяем доступность VS Code API
+        const vsCodeApi = (window as any).vscode;
+        console.log('[ApiStore] VS Code API в конструкторе:', vsCodeApi ? 'доступен' : 'недоступен');
+        
+        if (typeof window !== 'undefined') {
+            console.log('[ApiStore] window.acquireVsCodeApi:', typeof (window as any).acquireVsCodeApi);
+        }
 
         this.loadPersistedState();
     }
@@ -86,15 +108,35 @@ export class ApiStore {
      * @param key API ключ
      */
     private requestSecretStorage(provider: ApiProvider, key: string) {
-        const vsCodeApi = (window as any).vscode;
-        if (vsCodeApi) {
-            vsCodeApi.postMessage({
+        console.log(`[ApiStore] Попытка сохранения ключа для ${provider}...`);
+        
+        if (this.appStore && this.appStore.sendMessage) {
+            console.log(`[ApiStore] Используем AppStore для отправки сообщения storeSecret`);
+            this.appStore.sendMessage({
                 type: 'storeSecret',
                 data: {
                     key: `ai-assistant.apiKey.${provider}`,
                     value: key
                 }
             });
+            console.log(`[ApiStore] Сообщение storeSecret отправлено через AppStore для ${provider}`);
+        } else {
+            console.warn(`[ApiStore] AppStore недоступен, пробуем напрямую через window.vscode`);
+            
+            const vsCodeApi = (window as any).vscode;
+            if (vsCodeApi) {
+                console.log(`[ApiStore] VS Code API доступен, отправляем сообщение storeSecret`);
+                vsCodeApi.postMessage({
+                    type: 'storeSecret',
+                    data: {
+                        key: `ai-assistant.apiKey.${provider}`,
+                        value: key
+                    }
+                });
+                console.log(`[ApiStore] Сообщение storeSecret отправлено для ${provider}`);
+            } else {
+                console.warn(`[ApiStore] VS Code API недоступен при попытке сохранения ключа для ${provider}`);
+            }
         }
     }
 
@@ -103,11 +145,24 @@ export class ApiStore {
      * @param secrets Объект с секретами из VS Code
      */
     loadSecretsFromVsCode(secrets: Partial<Record<ApiProvider, string>>) {
+        console.log('Загружаем секреты из VS Code:', secrets);
+        
         Object.entries(secrets).forEach(([provider, key]) => {
             if (key && Object.values(ApiProvider).includes(provider as ApiProvider)) {
                 this.apiKeys[provider as ApiProvider] = key;
+                console.log(`Загружен ключ для ${provider}: ${key.substring(0, 8)}...`);
             }
         });
+        
+        this.secretsLoaded = true;
+        
+        // Выполняем отложенные запросы
+        while (this.pendingSecretRequests.length > 0) {
+            const request = this.pendingSecretRequests.shift();
+            if (request) {
+                request();
+            }
+        }
     }
 
     /**
@@ -180,8 +235,11 @@ export class ApiStore {
                 }
             }
 
-            // Запрашиваем загрузку секретов из VS Code
-            this.requestSecretsLoad();
+            // Запрашиваем загрузку секретов из VS Code с небольшой задержкой
+            // чтобы дать VS Code API время для инициализации
+            setTimeout(() => {
+                this.requestSecretsLoad();
+            }, 100);
         } catch (error) {
             console.warn('Ошибка загрузки состояния ApiStore:', error);
         }
@@ -191,13 +249,41 @@ export class ApiStore {
      * Запрашивает загрузку секретов из VS Code SecretStorage
      */
     private requestSecretsLoad() {
-        const vsCodeApi = (window as any).vscode;
-        if (vsCodeApi) {
-            vsCodeApi.postMessage({
+        console.log('[ApiStore] Запрашиваем загрузку секретов...');
+        
+        if (this.appStore && this.appStore.sendMessage) {
+            console.log('[ApiStore] Используем AppStore для запроса секретов');
+            this.appStore.sendMessage({
                 type: 'loadSecrets',
                 data: {}
             });
+            console.log('[ApiStore] Запрос loadSecrets отправлен через AppStore');
+        } else {
+            console.warn('[ApiStore] AppStore недоступен, пробуем напрямую через window.vscode');
+            
+            const vsCodeApi = (window as any).vscode;
+            if (vsCodeApi) {
+                console.log('Запрашиваем загрузку секретов из VS Code...');
+                vsCodeApi.postMessage({
+                    type: 'loadSecrets',
+                    data: {}
+                });
+            } else {
+                console.warn('VS Code API не доступен при запросе секретов');
+                // Если API недоступен, попробуем еще раз через секунду
+                setTimeout(() => {
+                    this.requestSecretsLoad();
+                }, 1000);
+            }
         }
+    }
+    
+    /**
+     * Принудительная повторная загрузка секретов
+     */
+    public refreshSecrets() {
+        console.log('[ApiStore] Принудительная загрузка секретов...');
+        this.requestSecretsLoad();
     }
 
     // Предустановленные модели для каждого провайдера
@@ -232,5 +318,11 @@ export class ApiStore {
             default:
                 return [];
         }
+    }
+
+    // Устанавливаем ссылку на AppStore после создания
+    setAppStore(appStore: any) {
+        this.appStore = appStore;
+        console.log('[ApiStore] AppStore установлен:', this.appStore ? 'успешно' : 'неудачно');
     }
 } 

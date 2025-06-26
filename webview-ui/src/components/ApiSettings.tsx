@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../contexts/StoreContext';
 import { ApiProvider } from '../stores/ApiStore';
-import { CaretDown, CaretRight, Eye, EyeSlash } from 'phosphor-react';
+import { CaretDown, CaretRight, Eye, EyeSlash, ArrowClockwise } from 'phosphor-react';
 
 export const ApiSettings: React.FC = observer(() => {
     const { apiStore } = useStores();
@@ -44,6 +44,13 @@ export const ApiSettings: React.FC = observer(() => {
         apiStore.setCustomUrl(value);
     };
 
+    const handleRefreshSecrets = () => {
+        apiStore.refreshSecrets();
+    };
+
+    // Проверяем, есть ли хотя бы один сохраненный ключ
+    const hasSavedKeys = Object.values(apiStore.apiKeys).some(key => key.length > 0);
+
     return (
         <div className="api-settings">
             <div 
@@ -57,6 +64,11 @@ export const ApiSettings: React.FC = observer(() => {
                         <CaretRight size={16} className="api-settings__chevron" />
                     )}
                     <h3 className="api-settings__title">Настройки API</h3>
+                    {hasSavedKeys && (
+                        <span className="api-settings__saved-indicator">
+                            ✓ Ключи сохранены
+                        </span>
+                    )}
                 </div>
                 <div className="api-settings__status">
                     {apiStore.isConfigValid ? (
@@ -69,6 +81,25 @@ export const ApiSettings: React.FC = observer(() => {
 
             {isExpanded && (
                 <div className="api-settings__content">
+                    {/* Индикатор загрузки секретов */}
+                    {hasSavedKeys && (
+                        <div className="api-settings__secrets-status">
+                            <div className="api-settings__secrets-info">
+                                <span className="api-settings__secrets-text">
+                                    API ключи загружены из безопасного хранилища VS Code
+                                </span>
+                                <button
+                                    type="button"
+                                    className="api-settings__refresh-button"
+                                    onClick={handleRefreshSecrets}
+                                    title="Обновить ключи из хранилища"
+                                >
+                                    <ArrowClockwise size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Выбор провайдера */}
                     <div className="api-settings__section">
                         <label className="api-settings__label">
@@ -87,6 +118,9 @@ export const ApiSettings: React.FC = observer(() => {
                                 >
                                     <div className="api-settings__provider-name">
                                         {providerLabels[provider]}
+                                        {apiStore.apiKeys[provider] && (
+                                            <span className="api-settings__provider-saved">●</span>
+                                        )}
                                     </div>
                                     {apiStore.currentProvider === provider && (
                                         <div className="api-settings__provider-checkmark">✓</div>
@@ -100,6 +134,11 @@ export const ApiSettings: React.FC = observer(() => {
                     <div className="api-settings__section">
                         <label className="api-settings__label">
                             API Ключ для {providerLabels[apiStore.currentProvider]}
+                            {apiStore.apiKeys[apiStore.currentProvider] && (
+                                <span className="api-settings__saved-badge">
+                                    Сохранен
+                                </span>
+                            )}
                         </label>
                         <div className="api-settings__input-group">
                             <input
@@ -121,6 +160,11 @@ export const ApiSettings: React.FC = observer(() => {
                                 )}
                             </button>
                         </div>
+                        {apiStore.apiKeys[apiStore.currentProvider] && (
+                            <div className="api-settings__key-info">
+                                Ключ автоматически сохраняется в безопасном хранилище VS Code
+                            </div>
+                        )}
                     </div>
 
                     {/* Custom URL для кастомного провайдера */}

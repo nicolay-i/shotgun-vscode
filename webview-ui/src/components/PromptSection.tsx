@@ -1,7 +1,7 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { usePromptStore, useFileStore, useApiStore, useAppStore, useTemplateStore } from '../contexts/StoreContext';
-import { PaperPlaneRight, Trash } from 'phosphor-react';
+import { PaperPlaneRight, Trash, Eye } from 'phosphor-react';
 
 export const PromptSection: React.FC = observer(() => {
     const promptStore = usePromptStore();
@@ -62,6 +62,10 @@ export const PromptSection: React.FC = observer(() => {
         promptStore.setAiResponse('');
     };
 
+    const handlePreview = () => {
+        promptStore.setPreviewModalOpen(true);
+    };
+
     return (
         <div className="prompt-section">
             <h3 className="app__section-title">Ваш запрос</h3>
@@ -81,6 +85,15 @@ export const PromptSection: React.FC = observer(() => {
                     >
                         <Trash size={16} />
                         Очистить
+                    </button>
+                    <button
+                        className="btn btn--secondary"
+                        onClick={handlePreview}
+                        title="Предпросмотр промпта"
+                        disabled={!promptStore.currentPrompt.trim()}
+                    >
+                        <Eye size={16} />
+                        Предпросмотр
                     </button>
                     <button
                         className={`btn btn--primary ${!canSubmit ? 'btn--disabled' : ''}`}
