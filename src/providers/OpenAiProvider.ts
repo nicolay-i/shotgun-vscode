@@ -26,4 +26,15 @@ export class OpenAiProvider implements IAiProvider {
             throw new Error(`Ошибка OpenAI API: ${error.message}`);
         }
     }
+
+    generatePayload(systemPrompt: string, userPrompt: string, config: ApiConfig): object {
+        return {
+            model: config.model || 'gpt-4',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.7,
+        };
+    }
 } 

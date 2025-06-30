@@ -36,4 +36,15 @@ export class OpenRouterProvider implements IAiProvider {
             throw new Error(`Ошибка OpenRouter API: ${error.message}`);
         }
     }
+
+    generatePayload(systemPrompt: string, userPrompt: string, config: ApiConfig): object {
+        return {
+            model: config.model || 'anthropic/claude-3-sonnet',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.7,
+        };
+    }
 } 

@@ -14,4 +14,13 @@ export interface IAiProvider {
      * @throws Error при ошибке запроса
      */
     sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<string>;
+
+    /**
+     * Генерирует payload для запроса к AI-провайдеру
+     * @param systemPrompt Системный промпт для AI
+     * @param userPrompt Пользовательский промпт
+     * @param config Конфигурация API
+     * @returns Объект payload для запроса
+     */
+    generatePayload(systemPrompt: string, userPrompt: string, config: ApiConfig): object;
 } 

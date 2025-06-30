@@ -1,11 +1,12 @@
 import { ApiConfig, PromptTemplate, SelectedFile } from './types';
 import { ProviderFactory } from './providers/ProviderFactory';
+import { IApiService } from './IApiService';
 
 /**
  * Сервис для работы с AI API
  * Использует паттерн "Стратегия" для работы с различными провайдерами
  */
-export class ApiService {
+export class ApiService implements IApiService {
     
     /**
      * Генерирует preview полной нагрузки запроса к LLM
@@ -22,50 +23,8 @@ export class ApiService {
         template?: PromptTemplate
     ): { systemPrompt: string; userPrompt: string; payload: any } {
         const { systemPrompt, userPrompt } = this.formatPrompt(template, prompt, selectedFiles);
-        
-        let payload: any = {};
-        
-        switch (config.provider) {
-            case 'openai':
-            case 'openrouter':
-                payload = {
-                    model: config.model || 'gpt-4',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ],
-                    temperature: 0.7
-                };
-                break;
-            case 'gemini':
-                payload = {
-                    model: config.model || 'gemini-1.5-pro',
-                    contents: [{
-                        parts: [{
-                            text: `${systemPrompt}\n\nЗадача пользователя:\n${userPrompt}`
-                        }]
-                    }]
-                };
-                break;
-            case 'custom':
-                payload = {
-                    model: config.model || 'custom-model',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ],
-                    temperature: 0.7
-                };
-                break;
-            default:
-                payload = {
-                    model: config.model || 'unknown-model',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ]
-                };
-        }
+        const provider = ProviderFactory.getProvider(config.provider);
+        const payload = provider.generatePayload(systemPrompt, userPrompt, config);
         
         return { systemPrompt, userPrompt, payload };
     }

@@ -70,4 +70,15 @@ export class CustomProvider implements IAiProvider {
             throw new Error(`Невалидный URL: ${error instanceof Error ? error.message : 'неизвестная ошибка'}`);
         }
     }
+
+    generatePayload(systemPrompt: string, userPrompt: string, config: ApiConfig): object {
+        return {
+            model: config.model || 'gpt-3.5-turbo',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.7,
+        };
+    }
 } 

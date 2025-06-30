@@ -22,4 +22,15 @@ export class GeminiProvider implements IAiProvider {
             throw new Error(`Ошибка Gemini API: ${error.message}`);
         }
     }
+
+    generatePayload(systemPrompt: string, userPrompt: string, config: ApiConfig): object {
+        return {
+            model: config.model || 'gemini-1.5-pro',
+            contents: [{
+                parts: [{
+                    text: `${systemPrompt}\n\nЗадача пользователя:\n${userPrompt}`
+                }]
+            }]
+        };
+    }
 } 

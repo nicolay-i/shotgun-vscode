@@ -46,7 +46,9 @@
     "compile": "tsc -p ./ && pnpm run build:webview",
     "watch": "tsc -watch -p ./",
     "pretest": "pnpm run compile",
-
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "build:webview": "webpack --mode=production",
     "dev:webview": "webpack --mode=development --watch",
     "package": "vsce package",
@@ -55,7 +57,11 @@
   "devDependencies": {
     "@types/vscode": "^1.85.0",
     "@types/node": "^20.x",
-
+    "@types/jest": "^29.5.8",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "mock-fs": "^5.2.0",
+    "@types/mock-fs": "^4.13.4",
     "typescript": "^5.3.0",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4",
@@ -78,5 +84,23 @@
     "mobx-react-lite": "^4.0.5",
     "phosphor-react": "^1.4.1",
     "node-fetch": "^3.3.2"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": ["**/src/**/*.test.ts"],
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/**/*.test.ts",
+      "!src/tests/**/*"
+    ],
+    "modulePathIgnorePatterns": ["<rootDir>/out/"],
+    "setupFilesAfterEnv": ["<rootDir>/src/tests/setup.ts"],
+    "moduleNameMapper": {
+      "^node-fetch$": "<rootDir>/src/tests/__mocks__/node-fetch.ts"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(node-fetch)/)"
+    ]
   }
 } 
