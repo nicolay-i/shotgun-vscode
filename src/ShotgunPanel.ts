@@ -11,6 +11,7 @@ import {
     OpenFileMessage, 
     SubmitToAIMessage, 
     SaveResponseMessage,
+    GeneratePayloadPreviewMessage,
     ApiProvider 
 } from './types';
 
@@ -156,6 +157,9 @@ export class ShotgunPanel {
             case 'submitToAI':
                 await this._handleSubmitToAI(message as SubmitToAIMessage);
                 break;
+            case 'generatePayloadPreview':
+                await this._handleGeneratePayloadPreview(message as GeneratePayloadPreviewMessage);
+                break;
             case 'saveResponse':
                 await this._handleSaveResponse(message as SaveResponseMessage);
                 break;
@@ -264,6 +268,46 @@ export class ShotgunPanel {
             // Скрываем индикатор загрузки
             this._panel.webview.postMessage({
                 type: 'loadingEnd'
+            });
+        }
+    }
+
+    private async _handleGeneratePayloadPreview(message: GeneratePayloadPreviewMessage) {
+        try {
+            const { prompt, selectedFiles, apiConfig, template } = message.data;
+            
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                throw new Error('Рабочая папка не открыта');
+            }
+
+            const rootPath = workspaceFolders[0].uri.fsPath;
+            
+            // Параллельно читаем содержимое всех выбранных файлов
+            const filesWithContent = await Promise.all(
+                selectedFiles.map(async (file) => {
+                    const fullPath = path.join(rootPath, file.path);
+                    const content = await this._fileSystemService.readFileContent(fullPath);
+                    return { ...file, content };
+                })
+            );
+
+            // Генерируем preview payload
+            const previewData = this._apiService.generatePayloadPreview(
+                prompt,
+                filesWithContent,
+                apiConfig,
+                template
+            );
+
+            this._panel.webview.postMessage({
+                type: 'payloadPreview',
+                data: previewData
+            });
+        } catch (error: any) {
+            this._panel.webview.postMessage({
+                type: 'error',
+                data: { message: `Ошибка генерации предпросмотра: ${error.message}` }
             });
         }
     }

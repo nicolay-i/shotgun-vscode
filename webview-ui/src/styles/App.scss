@@ -1309,7 +1309,6 @@ body {
         color: var(--vscode-foreground);
         white-space: pre-wrap;
         word-wrap: break-word;
-        max-height: 300px;
         overflow-y: auto;
 
         &--user {
@@ -1320,6 +1319,32 @@ body {
         &--final {
             border-left: 3px solid var(--vscode-terminal-ansiGreen);
             background-color: rgba(var(--vscode-terminal-ansiGreen), 0.1);
+        }
+
+        &--payload {
+            border-left: 3px solid var(--vscode-terminal-ansiCyan);
+            background-color: var(--vscode-editor-background);
+            font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            color: var(--vscode-editor-foreground);
+        }
+    }
+
+    &__provider-info {
+        padding: 12px;
+        background-color: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-editorWidget-border);
+        border-radius: 4px;
+        
+        p {
+            margin: 4px 0;
+            font-size: 13px;
+            
+            strong {
+                color: var(--vscode-foreground);
+                font-weight: 600;
+            }
         }
     }
 
@@ -1365,5 +1390,66 @@ body {
         font-style: italic;
         text-align: center;
         padding: 20px;
+    }
+
+    &__files-content {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    &__files-preview {
+        h5 {
+            margin: 0 0 12px 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+    }
+
+    &__file-content {
+        margin-bottom: 16px;
+        border: 1px solid var(--vscode-editorWidget-border);
+        border-radius: 4px;
+        overflow: hidden;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    &__file-header {
+        background-color: var(--vscode-input-background);
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--vscode-editorWidget-border);
+        
+        code {
+            font-family: var(--vscode-editor-font-family);
+            font-size: 12px;
+            color: var(--vscode-foreground);
+            background: none;
+        }
+    }
+
+    &__file-text {
+        margin: 0;
+        padding: 12px;
+        background-color: var(--vscode-editor-background);
+        font-family: var(--vscode-editor-font-family);
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--vscode-foreground);
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    &__more-files {
+        margin: 12px 0 0 0;
+        color: var(--vscode-descriptionForeground);
+        font-style: italic;
+        text-align: center;
+        font-size: 12px;
     }
 } 

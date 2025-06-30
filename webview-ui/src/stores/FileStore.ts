@@ -26,6 +26,7 @@ export class FileStore {
             unselectFile: action,
             toggleFolder: action,
             clearSelection: action,
+            updateFileContent: action,
             selectedFilesList: computed
         });
 
@@ -96,6 +97,13 @@ export class FileStore {
         this.selectedFiles.clear();
         this.updateTreeWithSelection(this.fileTree);
         this.savePersistedState();
+    }
+
+    updateFileContent(filePath: string, content: string) {
+        const file = this.selectedFiles.get(filePath);
+        if (file) {
+            file.content = content;
+        }
     }
 
     private updateTreeWithSelection(nodes: FileNode[]) {

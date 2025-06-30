@@ -6,6 +6,69 @@ import { ProviderFactory } from './providers/ProviderFactory';
  * Использует паттерн "Стратегия" для работы с различными провайдерами
  */
 export class ApiService {
+    
+    /**
+     * Генерирует preview полной нагрузки запроса к LLM
+     * @param prompt Пользовательский промпт
+     * @param selectedFiles Выбранные файлы для анализа
+     * @param config Конфигурация API
+     * @param template Шаблон промпта (опционально)
+     * @returns Объект с preview данными
+     */
+    generatePayloadPreview(
+        prompt: string,
+        selectedFiles: SelectedFile[],
+        config: ApiConfig,
+        template?: PromptTemplate
+    ): { systemPrompt: string; userPrompt: string; payload: any } {
+        const { systemPrompt, userPrompt } = this.formatPrompt(template, prompt, selectedFiles);
+        
+        let payload: any = {};
+        
+        switch (config.provider) {
+            case 'openai':
+            case 'openrouter':
+                payload = {
+                    model: config.model || 'gpt-4',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.7
+                };
+                break;
+            case 'gemini':
+                payload = {
+                    model: config.model || 'gemini-1.5-pro',
+                    contents: [{
+                        parts: [{
+                            text: `${systemPrompt}\n\nЗадача пользователя:\n${userPrompt}`
+                        }]
+                    }]
+                };
+                break;
+            case 'custom':
+                payload = {
+                    model: config.model || 'custom-model',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.7
+                };
+                break;
+            default:
+                payload = {
+                    model: config.model || 'unknown-model',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ]
+                };
+        }
+        
+        return { systemPrompt, userPrompt, payload };
+    }
     /**
      * Форматирует промпт на основе шаблона и выбранных файлов
      * @param template Шаблон промпта (опционально)

@@ -72,6 +72,25 @@ export interface SubmitToAIMessage extends Message {
     };
 }
 
+export interface GeneratePayloadPreviewMessage extends Message {
+    type: 'generatePayloadPreview';
+    data: {
+        prompt: string;
+        selectedFiles: SelectedFile[];
+        apiConfig: ApiConfig;
+        template?: PromptTemplate;
+    };
+}
+
+export interface PayloadPreviewMessage extends Message {
+    type: 'payloadPreview';
+    data: {
+        systemPrompt: string;
+        userPrompt: string;
+        payload: any;
+    };
+}
+
 export interface SaveResponseMessage extends Message {
     type: 'saveResponse';
     data: {

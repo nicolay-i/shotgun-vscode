@@ -62,8 +62,59 @@ export const PromptSection: React.FC = observer(() => {
         promptStore.setAiResponse('');
     };
 
-    const handlePreview = () => {
-        promptStore.setPreviewModalOpen(true);
+    const handlePreview = async () => {
+        promptStore.setLoadingPreview(true);
+        promptStore.setPayloadPreviewData(null); // Очищаем предыдущие данные
+        
+        try {
+            // Сначала загружаем содержимое всех выбранных файлов, которые еще не загружены
+            const filesToLoad = fileStore.selectedFilesList.filter(file => !file.content);
+            
+            // Запрашиваем содержимое файлов
+            filesToLoad.forEach(file => {
+                appStore.sendMessage({
+                    type: 'getFileContent',
+                    data: { filePath: file.path }
+                });
+            });
+            
+            // Небольшая задержка для загрузки файлов
+            if (filesToLoad.length > 0) {
+                await new Promise(resolve => setTimeout(resolve, 100 * filesToLoad.length));
+            }
+            
+            // Теперь запрашиваем данные предпросмотра от сервера
+            appStore.sendMessage({
+                type: 'generatePayloadPreview',
+                data: {
+                    prompt: promptStore.currentPrompt,
+                    selectedFiles: fileStore.selectedFilesList.map(file => ({
+                        path: file.path,
+                        content: file.content || ''
+                    })),
+                    apiConfig: {
+                        provider: apiStore.currentApiConfig.provider,
+                        apiKey: apiStore.currentApiConfig.apiKey,
+                        customUrl: apiStore.currentApiConfig.customUrl,
+                        model: apiStore.currentApiConfig.model
+                    },
+                    template: templateStore.selectedTemplate ? {
+                        id: templateStore.selectedTemplate.id,
+                        name: templateStore.selectedTemplate.name,
+                        description: templateStore.selectedTemplate.description,
+                        systemPrompt: templateStore.selectedTemplate.systemPrompt,
+                        userPrompt: templateStore.selectedTemplate.userPrompt,
+                        isBuiltIn: templateStore.selectedTemplate.isBuiltIn
+                    } : undefined
+                }
+            });
+            
+            // Затем открываем модальное окно
+            promptStore.setPreviewModalOpen(true);
+        } catch (error) {
+            console.error('Ошибка при загрузке предпросмотра:', error);
+            promptStore.setLoadingPreview(false);
+        }
     };
 
     return (

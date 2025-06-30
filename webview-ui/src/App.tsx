@@ -39,10 +39,14 @@ const AppContent: React.FC = observer(() => {
                     fileStore.setFileTree(message.data);
                     break;
                 case 'fileContent':
-                    // Обработка содержимого файла будет в компоненте
+                    fileStore.updateFileContent(message.data.path, message.data.content);
                     break;
                 case 'aiResponse':
                     rootStore.promptStore.setAiResponse(message.data);
+                    break;
+                case 'payloadPreview':
+                    rootStore.promptStore.setPayloadPreviewData(message.data);
+                    rootStore.promptStore.setLoadingPreview(false);
                     break;
                 case 'loadingStart':
                     appStore.setLoading(true);

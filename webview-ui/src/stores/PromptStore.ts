@@ -5,6 +5,8 @@ export class PromptStore {
     aiResponse: string = '';
     isSubmitting: boolean = false;
     isPreviewModalOpen: boolean = false;
+    payloadPreviewData: { systemPrompt: string; userPrompt: string; payload: any } | null = null;
+    isLoadingPreview: boolean = false;
 
     constructor() {
         makeAutoObservable(this, {
@@ -14,7 +16,9 @@ export class PromptStore {
             clearPrompt: action,
             clearResponse: action,
             clearAll: action,
-            setPreviewModalOpen: action
+            setPreviewModalOpen: action,
+            setPayloadPreviewData: action,
+            setLoadingPreview: action
         });
 
         this.loadPersistedState();
@@ -35,6 +39,14 @@ export class PromptStore {
 
     setPreviewModalOpen(open: boolean) {
         this.isPreviewModalOpen = open;
+    }
+
+    setPayloadPreviewData(data: { systemPrompt: string; userPrompt: string; payload: any } | null) {
+        this.payloadPreviewData = data;
+    }
+
+    setLoadingPreview(loading: boolean) {
+        this.isLoadingPreview = loading;
     }
 
     clearPrompt() {
