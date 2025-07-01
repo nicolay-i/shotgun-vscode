@@ -110,12 +110,7 @@ export class FileSystemService implements IFileSystemService {
             '.env.development'
         ];
 
-        return ignoredPatterns.some(pattern => {
-            if (pattern.startsWith('.')) {
-                return name === pattern;
-            }
-            return name.includes(pattern);
-        });
+        return ignoredPatterns.includes(name);
     }
 
     /**
