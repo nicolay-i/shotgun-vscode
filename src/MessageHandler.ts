@@ -190,17 +190,17 @@ export class MessageHandler {
             const { content, templateName } = message.data;
             const rootPath = workspaceFolders[0].uri.fsPath;
             
-            // Создаём папку responses если её нет
-            const responsesDir = path.join(rootPath, 'responses');
-            await this.fileSystemService.ensureDirectory(responsesDir);
+            // Создаём папку plans если её нет
+            const plansDir = path.join(rootPath, 'plans');
+            await this.fileSystemService.ensureDirectory(plansDir);
             
             // Генерируем имя файла
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             const fileName = templateName 
                 ? `${templateName}_${timestamp}.md`
-                : `response_${timestamp}.md`;
+                : `plan_${timestamp}.md`;
             
-            const filePath = path.join(responsesDir, fileName);
+            const filePath = path.join(plansDir, fileName);
             await this.fileSystemService.saveFile(filePath, content);
             
             // Показываем сообщение об успехе
