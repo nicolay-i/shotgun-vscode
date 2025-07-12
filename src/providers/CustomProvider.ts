@@ -55,17 +55,6 @@ export class CustomProvider implements IAiProvider {
             if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
                 throw new Error('Поддерживаются только HTTP и HTTPS протоколы');
             }
-
-            // Блокируем localhost и приватные IP
-            const hostname = parsedUrl.hostname.toLowerCase();
-            if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
-                throw new Error('Локальные адреса не разрешены');
-            }
-
-            // Блокируем приватные IP диапазоны (упрощенная проверка)
-            if (hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.')) {
-                throw new Error('Приватные IP адреса не разрешены');
-            }
         } catch (error) {
             throw new Error(`Невалидный URL: ${error instanceof Error ? error.message : 'неизвестная ошибка'}`);
         }

@@ -657,6 +657,10 @@ body {
         font-size: 16px;
         font-weight: 600;
         color: var(--vscode-foreground);
+
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     &__close {
@@ -1396,6 +1400,18 @@ body {
         display: flex;
         flex-direction: column;
         gap: 16px;
+    }
+
+    &__toggle-files {
+        margin-top: 8px;
+        align-self: flex-start;
+        gap: 6px;
+        font-size: 12px;
+        padding: 6px 12px;
+        
+        &:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
     }
 
     &__files-preview {

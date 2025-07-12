@@ -1,6 +1,6 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
-import { X, Copy, Eye, Code } from 'phosphor-react';
+import { X, Copy, Eye, Code, CaretDown, CaretUp } from 'phosphor-react';
 import { usePromptStore, useFileStore, useTemplateStore, useApiStore } from '../contexts/StoreContext';
 
 export const PromptPreviewModal: React.FC = observer(() => {
@@ -8,6 +8,8 @@ export const PromptPreviewModal: React.FC = observer(() => {
     const fileStore = useFileStore();
     const templateStore = useTemplateStore();
     const apiStore = useApiStore();
+    
+    const [showAllFiles, setShowAllFiles] = React.useState(false);
 
     if (!promptStore.isPreviewModalOpen) return null;
 
@@ -15,13 +17,7 @@ export const PromptPreviewModal: React.FC = observer(() => {
         promptStore.setPreviewModalOpen(false);
     };
 
-    const handleCopyUserPrompt = async () => {
-        try {
-            await navigator.clipboard.writeText(promptStore.currentPrompt);
-        } catch (error) {
-            console.error('Ошибка копирования пользовательского промпта:', error);
-        }
-    };
+
 
     const handleCopyFinalPrompt = async () => {
         try {
@@ -41,13 +37,7 @@ export const PromptPreviewModal: React.FC = observer(() => {
         }
     };
 
-    const handleCopyPayload = async () => {
-        try {
-            await navigator.clipboard.writeText(JSON.stringify(llmPayload, null, 2));
-        } catch (error) {
-            console.error('Ошибка копирования payload:', error);
-        }
-    };
+
 
     const template = templateStore.selectedTemplate;
     const currentProvider = apiStore.currentApiConfig.provider;
@@ -56,7 +46,11 @@ export const PromptPreviewModal: React.FC = observer(() => {
     const previewData = promptStore.payloadPreviewData;
     const systemPrompt = previewData?.systemPrompt || 'Данные загружаются...';
     const finalUserPrompt = previewData?.userPrompt || 'Данные загружаются...';
-    const llmPayload = previewData?.payload || { message: 'Данные загружаются...' };
+
+    // Логика для отображения файлов
+    const selectedFiles = fileStore.selectedFilesList;
+    const displayedFiles = showAllFiles ? selectedFiles : selectedFiles.slice(0, 5);
+    const hasMoreFiles = selectedFiles.length > 5;
 
     return (
         <div className="modal-overlay">
@@ -148,7 +142,7 @@ export const PromptPreviewModal: React.FC = observer(() => {
                             {fileStore.selectedFilesList.length > 0 ? (
                                 <div className="prompt-preview__files-content">
                                     <ul className="prompt-preview__files-list">
-                                        {fileStore.selectedFilesList.map(file => (
+                                        {displayedFiles.map(file => (
                                             <li key={file.path} className="prompt-preview__file-item">
                                                 <span className="prompt-preview__file-path">{file.path}</span>
                                                 <span className="prompt-preview__file-size">
@@ -157,32 +151,24 @@ export const PromptPreviewModal: React.FC = observer(() => {
                                             </li>
                                         ))}
                                     </ul>
-                                    
-                                    {/* Показываем содержимое первых 3 файлов */}
-                                    <div className="prompt-preview__files-preview">
-                                        <h5>Предпросмотр содержимого файлов:</h5>
-                                        {fileStore.selectedFilesList.slice(0, 3).map(file => (
-                                            <div key={file.path} className="prompt-preview__file-content">
-                                                <div className="prompt-preview__file-header">
-                                                    <code>{file.path}</code>
-                                                </div>
-                                                <pre className="prompt-preview__file-text">
-                                                    {file.content ? 
-                                                        (file.content.length > 500 ? 
-                                                            `${file.content.substring(0, 500)}...\n[Содержимое обрезано для предпросмотра]` : 
-                                                            file.content
-                                                        ) : 
-                                                        'Содержимое не загружено'
-                                                    }
-                                                </pre>
-                                            </div>
-                                        ))}
-                                        {fileStore.selectedFilesList.length > 3 && (
-                                            <p className="prompt-preview__more-files">
-                                                ... и еще {fileStore.selectedFilesList.length - 3} файлов
-                                            </p>
-                                        )}
-                                    </div>
+                                    {hasMoreFiles && (
+                                        <button
+                                            className="btn btn--secondary btn--small prompt-preview__toggle-files"
+                                            onClick={() => setShowAllFiles(!showAllFiles)}
+                                        >
+                                            {showAllFiles ? (
+                                                <>
+                                                    <CaretUp size={14} />
+                                                    Свернуть список
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CaretDown size={14} />
+                                                    Показать все ({selectedFiles.length - 5} ещё)
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 <p className="prompt-preview__empty">Файлы не выбраны</p>
