@@ -9,10 +9,10 @@ import {
     Message, 
     GetFileContentMessage, 
     OpenFileMessage, 
-    SubmitToAIMessage, 
+    SubmitToAIMessage,
     SaveResponseMessage,
     GeneratePayloadPreviewMessage,
-    ApiProvider 
+    ApiProvider
 } from './types';
 
 /**
@@ -92,6 +92,9 @@ export class ShotgunPanel {
 
         // Загружаем секреты при создании панели
         this._loadAndSendSecrets();
+        
+        // Отправляем информацию о workspace
+        this._sendWorkspaceInfo();
     }
 
     private _setWebviewHtml() {
@@ -392,6 +395,28 @@ export class ShotgunPanel {
         } catch (error: any) {
             console.warn('Ошибка загрузки секретов:', error);
         }
+    }
+
+    private _sendWorkspaceInfo() {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            console.warn('Нет открытых workspace folders');
+            return;
+        }
+
+        const workspaceFolder = workspaceFolders[0];
+        const workspacePath = workspaceFolder.uri.fsPath;
+        const workspaceName = workspaceFolder.name;
+
+        console.log(`Отправляем информацию о workspace: ${workspaceName} (${workspacePath})`);
+
+        this._panel.webview.postMessage({
+            type: 'workspaceInfo',
+            data: {
+                workspacePath,
+                workspaceName
+            }
+        });
     }
 
     private _getNonce(): string {

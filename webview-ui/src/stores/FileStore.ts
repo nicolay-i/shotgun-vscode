@@ -18,6 +18,7 @@ export class FileStore {
     fileTree: FileNode[] = [];
     selectedFiles: Map<string, SelectedFile> = new Map();
     expandedFolders: Set<string> = new Set();
+    currentWorkspacePath: string = '';
 
     constructor() {
         makeAutoObservable(this, {
@@ -27,10 +28,11 @@ export class FileStore {
             toggleFolder: action,
             clearSelection: action,
             updateFileContent: action,
+            setWorkspacePath: action,
             selectedFilesList: computed
         });
 
-        this.loadPersistedState();
+        // Не загружаем состояние в конструкторе, ждем установки workspace path
     }
 
     setFileTree(tree: FileNode[]) {
@@ -106,6 +108,13 @@ export class FileStore {
         }
     }
 
+    setWorkspacePath(workspacePath: string) {
+        if (this.currentWorkspacePath !== workspacePath) {
+            this.currentWorkspacePath = workspacePath;
+            this.loadPersistedState();
+        }
+    }
+
     private updateTreeWithSelection(nodes: FileNode[]) {
         nodes.forEach(node => {
             if (node.type === 'file') {
@@ -146,16 +155,32 @@ export class FileStore {
     }
 
     private savePersistedState() {
+        if (!this.currentWorkspacePath) {
+            return; // Не сохраняем состояние без workspace path
+        }
+
         const state = {
             selectedFiles: Array.from(this.selectedFiles.keys()),
             expandedFolders: Array.from(this.expandedFolders)
         };
-        localStorage.setItem('fileStore', JSON.stringify(state));
+        
+        const storageKey = this.getWorkspaceStorageKey(this.currentWorkspacePath);
+        localStorage.setItem(storageKey, JSON.stringify(state));
     }
 
     private loadPersistedState() {
+        if (!this.currentWorkspacePath) {
+            return; // Не загружаем состояние без workspace path
+        }
+
+        // Сначала очищаем текущее состояние
+        this.selectedFiles.clear();
+        this.expandedFolders.clear();
+
         try {
-            const saved = localStorage.getItem('fileStore');
+            const storageKey = this.getWorkspaceStorageKey(this.currentWorkspacePath);
+            const saved = localStorage.getItem(storageKey);
+            
             if (saved) {
                 const state = JSON.parse(saved);
                 if (state.selectedFiles) {
@@ -167,8 +192,43 @@ export class FileStore {
                     this.expandedFolders = new Set(state.expandedFolders);
                 }
             }
+
+            // Попытаемся мигрировать старые данные при первом запуске
+            this.migrateOldData();
         } catch (error) {
             console.warn('Ошибка загрузки состояния FileStore:', error);
+        }
+    }
+
+    private getWorkspaceStorageKey(workspacePath: string): string {
+        // Создаем безопасный ключ из пути workspace
+        const normalizedPath = workspacePath.replace(/[\\\/]/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+        return `shotgun-file-store-${normalizedPath}`;
+    }
+
+    private migrateOldData() {
+        // Проверяем, есть ли старые данные в localStorage
+        const oldData = localStorage.getItem('fileStore');
+        if (oldData && !localStorage.getItem(this.getWorkspaceStorageKey(this.currentWorkspacePath))) {
+            try {
+                const state = JSON.parse(oldData);
+                // Сохраняем старые данные для текущего workspace
+                localStorage.setItem(this.getWorkspaceStorageKey(this.currentWorkspacePath), oldData);
+                
+                // Применяем миграцию
+                if (state.selectedFiles) {
+                    state.selectedFiles.forEach((path: string) => {
+                        this.selectedFiles.set(path, { path });
+                    });
+                }
+                if (state.expandedFolders) {
+                    this.expandedFolders = new Set(state.expandedFolders);
+                }
+                
+                console.log('Данные успешно мигрированы для workspace:', this.currentWorkspacePath);
+            } catch (error) {
+                console.warn('Ошибка миграции старых данных:', error);
+            }
         }
     }
 } 

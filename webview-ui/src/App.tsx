@@ -65,6 +65,10 @@ const AppContent: React.FC = observer(() => {
                     console.log('[App] Обрабатываем secretsLoaded:', message.data);
                     apiStore.handleMessage(message);
                     break;
+                case 'workspaceInfo':
+                    console.log('[App] Обрабатываем workspaceInfo:', message.data);
+                    fileStore.setWorkspacePath(message.data.workspacePath);
+                    break;
                 default:
                     console.log('[App] Неизвестный тип сообщения:', message.type);
             }
