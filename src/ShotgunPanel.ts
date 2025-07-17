@@ -179,7 +179,10 @@ export class ShotgunPanel {
         if (!workspaceFolders) {
             this._panel.webview.postMessage({
                 type: 'fileTree',
-                data: []
+                data: {
+                    files: [],
+                    workspacePath: ''
+                }
             });
             return;
         }
@@ -189,7 +192,10 @@ export class ShotgunPanel {
         
         this._panel.webview.postMessage({
             type: 'fileTree',
-            data: fileTree
+            data: {
+                files: fileTree,
+                workspacePath: rootPath
+            }
         });
     }
 

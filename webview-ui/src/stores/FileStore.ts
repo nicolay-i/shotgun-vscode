@@ -18,6 +18,7 @@ export class FileStore {
     fileTree: FileNode[] = [];
     selectedFiles: Map<string, SelectedFile> = new Map();
     expandedFolders: Set<string> = new Set();
+    private currentWorkspace: string | null = null;
 
     constructor() {
         makeAutoObservable(this, {
@@ -27,10 +28,18 @@ export class FileStore {
             toggleFolder: action,
             clearSelection: action,
             updateFileContent: action,
+            setWorkspace: action,
             selectedFilesList: computed
         });
+    }
 
-        this.loadPersistedState();
+    setWorkspace(workspacePath: string) {
+        if (this.currentWorkspace !== workspacePath) {
+            this.currentWorkspace = workspacePath;
+            this.selectedFiles.clear();
+            this.expandedFolders.clear();
+            this.loadPersistedState();
+        }
     }
 
     setFileTree(tree: FileNode[]) {
@@ -146,16 +155,22 @@ export class FileStore {
     }
 
     private savePersistedState() {
+        if (!this.currentWorkspace) return;
+        
         const state = {
             selectedFiles: Array.from(this.selectedFiles.keys()),
             expandedFolders: Array.from(this.expandedFolders)
         };
-        localStorage.setItem('fileStore', JSON.stringify(state));
+        const storageKey = `fileStore_${this.getWorkspaceHash(this.currentWorkspace)}`;
+        localStorage.setItem(storageKey, JSON.stringify(state));
     }
 
     private loadPersistedState() {
+        if (!this.currentWorkspace) return;
+        
         try {
-            const saved = localStorage.getItem('fileStore');
+            const storageKey = `fileStore_${this.getWorkspaceHash(this.currentWorkspace)}`;
+            const saved = localStorage.getItem(storageKey);
             if (saved) {
                 const state = JSON.parse(saved);
                 if (state.selectedFiles) {
@@ -170,5 +185,16 @@ export class FileStore {
         } catch (error) {
             console.warn('Ошибка загрузки состояния FileStore:', error);
         }
+    }
+
+    private getWorkspaceHash(workspacePath: string): string {
+        // Создаем простой хеш из пути к workspace
+        let hash = 0;
+        for (let i = 0; i < workspacePath.length; i++) {
+            const char = workspacePath.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Конвертируем в 32-битное число
+        }
+        return Math.abs(hash).toString(36);
     }
 } 

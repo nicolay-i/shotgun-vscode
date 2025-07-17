@@ -36,7 +36,10 @@ const AppContent: React.FC = observer(() => {
             
             switch (message.type) {
                 case 'fileTree':
-                    fileStore.setFileTree(message.data);
+                    if (message.data.workspacePath) {
+                        fileStore.setWorkspace(message.data.workspacePath);
+                    }
+                    fileStore.setFileTree(message.data.files || message.data);
                     break;
                 case 'fileContent':
                     fileStore.updateFileContent(message.data.path, message.data.content);
