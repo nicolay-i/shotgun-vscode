@@ -18,8 +18,10 @@ export class FileStore {
     fileTree: FileNode[] = [];
     selectedFiles: Map<string, SelectedFile> = new Map();
     expandedFolders: Set<string> = new Set();
+    private appStore: any;
 
-    constructor() {
+    constructor(appStore?: any) {
+        this.appStore = appStore;
         makeAutoObservable(this, {
             setFileTree: action,
             selectFile: action,
@@ -145,17 +147,29 @@ export class FileStore {
         return files;
     }
 
+    private getStorageKey(): string {
+        const workspaceId = this.appStore?.workspaceId || '';
+        if (workspaceId) {
+            // Создаем безопасный ключ из пути workspace
+            const safeKey = workspaceId.replace(/[^a-zA-Z0-9]/g, '_');
+            return `fileStore_${safeKey}`;
+        }
+        return 'fileStore'; // Fallback для случаев без workspace
+    }
+
     private savePersistedState() {
         const state = {
             selectedFiles: Array.from(this.selectedFiles.keys()),
             expandedFolders: Array.from(this.expandedFolders)
         };
-        localStorage.setItem('fileStore', JSON.stringify(state));
+        const storageKey = this.getStorageKey();
+        localStorage.setItem(storageKey, JSON.stringify(state));
     }
 
     private loadPersistedState() {
         try {
-            const saved = localStorage.getItem('fileStore');
+            const storageKey = this.getStorageKey();
+            const saved = localStorage.getItem(storageKey);
             if (saved) {
                 const state = JSON.parse(saved);
                 if (state.selectedFiles) {

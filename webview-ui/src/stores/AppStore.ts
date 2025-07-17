@@ -3,13 +3,15 @@ import { makeAutoObservable, action } from 'mobx';
 export class AppStore {
     isLoading: boolean = false;
     error: string | null = null;
+    workspaceId: string = '';
     private vscodeApi: any = null;
 
     constructor() {
         makeAutoObservable(this, {
             setLoading: action,
             setError: action,
-            clearError: action
+            clearError: action,
+            setWorkspaceId: action
         });
 
         console.log('[AppStore] Инициализация AppStore...');
@@ -22,6 +24,12 @@ export class AppStore {
         } else {
             console.warn('[AppStore] acquireVsCodeApi недоступен!');
         }
+
+        // Запрашиваем workspaceId при инициализации
+        this.requestWorkspaceId();
+        
+        // Подписываемся на сообщения от расширения
+        this.setupMessageListener();
     }
 
     setLoading(loading: boolean) {
@@ -34,6 +42,33 @@ export class AppStore {
 
     clearError() {
         this.error = null;
+    }
+
+    setWorkspaceId(workspaceId: string) {
+        this.workspaceId = workspaceId;
+    }
+
+    // Запрашиваем workspaceId у расширения
+    requestWorkspaceId() {
+        console.log('[AppStore] Запрашиваем workspaceId...');
+        this.sendMessage({
+            type: 'getWorkspaceId'
+        });
+    }
+
+    // Настраиваем слушатель сообщений от расширения
+    setupMessageListener() {
+        if (typeof window !== 'undefined') {
+            window.addEventListener('message', (event) => {
+                const message = event.data;
+                console.log('[AppStore] Получено сообщение:', message.type, message);
+                
+                if (message.type === 'workspaceId') {
+                    console.log('[AppStore] Получен workspaceId:', message.data.workspaceId);
+                    this.setWorkspaceId(message.data.workspaceId);
+                }
+            });
+        }
     }
 
     // Отправка сообщения в VS Code Extension

@@ -5,14 +5,15 @@ import { IFileSystemService } from './services/IFileSystemService';
 import { FileSystemService } from './services/FileSystemService';
 import { ISecretStorageService } from './services/ISecretStorageService';
 import { VsCodeSecretStorageService } from './services/VsCodeSecretStorageService';
-import { 
-    Message, 
-    GetFileContentMessage, 
-    OpenFileMessage, 
-    SubmitToAIMessage, 
+import {
+    Message,
+    GetFileContentMessage,
+    OpenFileMessage,
+    SubmitToAIMessage,
     SaveResponseMessage,
     GeneratePayloadPreviewMessage,
-    ApiProvider 
+    GetWorkspaceIdMessage,
+    ApiProvider
 } from './types';
 
 /**
@@ -92,6 +93,9 @@ export class ShotgunPanel {
 
         // Загружаем секреты при создании панели
         this._loadAndSendSecrets();
+        
+        // Отправляем workspaceId при инициализации
+        this._sendWorkspaceId();
     }
 
     private _setWebviewHtml() {
@@ -168,6 +172,9 @@ export class ShotgunPanel {
                 break;
             case 'loadSecrets':
                 await this._handleLoadSecrets(message as LoadSecretsMessage);
+                break;
+            case 'getWorkspaceId':
+                await this._handleGetWorkspaceId(message as GetWorkspaceIdMessage);
                 break;
             default:
                 console.warn(`Неизвестный тип сообщения: ${message.type}`);
@@ -364,6 +371,46 @@ export class ShotgunPanel {
 
     private async _handleLoadSecrets(_message: LoadSecretsMessage) {
         await this._loadAndSendSecrets();
+    }
+
+    private async _handleGetWorkspaceId(_message: GetWorkspaceIdMessage) {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            // Если нет рабочего пространства, отправляем пустой ID
+            this._panel.webview.postMessage({
+                type: 'workspaceId',
+                data: { workspaceId: '' }
+            });
+            return;
+        }
+
+        const workspaceId = workspaceFolders[0].uri.fsPath;
+        
+        this._panel.webview.postMessage({
+            type: 'workspaceId',
+            data: { workspaceId }
+        });
+    }
+
+    private async _sendWorkspaceId() {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            // Если нет рабочего пространства, отправляем пустой ID
+            this._panel.webview.postMessage({
+                type: 'workspaceId',
+                data: { workspaceId: '' }
+            });
+            return;
+        }
+
+        const workspaceId = workspaceFolders[0].uri.fsPath;
+        
+        this._panel.webview.postMessage({
+            type: 'workspaceId',
+            data: { workspaceId }
+        });
     }
 
     private async _loadAndSendSecrets() {

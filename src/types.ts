@@ -126,4 +126,15 @@ export interface ErrorMessage extends Message {
     data: {
         message: string;
     };
-} 
+}
+
+export interface GetWorkspaceIdMessage extends Message {
+    type: 'getWorkspaceId';
+}
+
+export interface WorkspaceIdMessage extends Message {
+    type: 'workspaceId';
+    data: {
+        workspaceId: string;
+    };
+}
