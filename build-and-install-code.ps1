@@ -12,4 +12,12 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+Write-Host "Installing extension to Code..." -ForegroundColor Green
+$result = & code --install-extension ai-code-assistant-1.0.0.vsix
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Extension installation failed!" -ForegroundColor Red
+    exit 1
+}
+
+
 Write-Host "Done! Extension installed successfully." -ForegroundColor Green 
