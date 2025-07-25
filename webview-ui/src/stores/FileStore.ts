@@ -29,6 +29,7 @@ export class FileStore {
             clearSelection: action,
             updateFileContent: action,
             setWorkspace: action,
+            setWorkspacePath: action,
             selectedFilesList: computed
         });
     }
@@ -115,6 +116,13 @@ export class FileStore {
         }
     }
 
+    setWorkspacePath(workspacePath: string) {
+        if (this.currentWorkspacePath !== workspacePath) {
+            this.currentWorkspacePath = workspacePath;
+            this.loadPersistedState();
+        }
+    }
+
     private updateTreeWithSelection(nodes: FileNode[]) {
         nodes.forEach(node => {
             if (node.type === 'file') {
@@ -182,6 +190,9 @@ export class FileStore {
                     this.expandedFolders = new Set(state.expandedFolders);
                 }
             }
+
+            // Попытаемся мигрировать старые данные при первом запуске
+            this.migrateOldData();
         } catch (error) {
             console.warn('Ошибка загрузки состояния FileStore:', error);
         }

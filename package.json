@@ -50,7 +50,8 @@
     "build:webview": "webpack --mode=production",
     "dev:webview": "webpack --mode=development --watch",
     "package": "vsce package",
-    "install-local": "powershell -ExecutionPolicy Bypass -File build-and-install.ps1"
+    "install-local": "powershell -ExecutionPolicy Bypass -File build-and-install-code.ps1",
+    "install-local-cursor": "powershell -ExecutionPolicy Bypass -File build-and-install.ps1"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
