@@ -117,8 +117,8 @@ export class FileStore {
     }
 
     setWorkspacePath(workspacePath: string) {
-        if (this.currentWorkspacePath !== workspacePath) {
-            this.currentWorkspacePath = workspacePath;
+        if (this.currentWorkspace !== workspacePath) {
+            this.currentWorkspace = workspacePath;
             this.loadPersistedState();
         }
     }
@@ -191,8 +191,6 @@ export class FileStore {
                 }
             }
 
-            // Попытаемся мигрировать старые данные при первом запуске
-            this.migrateOldData();
         } catch (error) {
             console.warn('Ошибка загрузки состояния FileStore:', error);
         }
