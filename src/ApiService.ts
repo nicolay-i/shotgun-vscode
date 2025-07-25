@@ -116,12 +116,17 @@ export class ApiService {
         selectedFiles: SelectedFile[],
         config: ApiConfig,
         template?: PromptTemplate
-    ): Promise<string> {
+    ): Promise<{ content: string; usage: any }> {
         const { systemPrompt, userPrompt } = this.formatPrompt(template, prompt, selectedFiles);
         
         // Получаем провайдер через фабрику
         const provider = ProviderFactory.getProvider(config.provider);
         
-        return provider.sendRequest(systemPrompt, userPrompt, config);
+        const response = await provider.sendRequest(systemPrompt, userPrompt, config);
+        
+        return {
+            content: response.content,
+            usage: response.usage
+        };
     }
 } 

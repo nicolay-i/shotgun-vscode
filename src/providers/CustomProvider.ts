@@ -1,12 +1,12 @@
 import fetch from 'node-fetch';
-import { IAiProvider } from './IAiProvider';
+import { IAiProvider, AIResponse, TokenUsage } from './IAiProvider';
 import { ApiConfig } from '../types';
 
 /**
  * Провайдер для работы с кастомными API
  */
 export class CustomProvider implements IAiProvider {
-    async sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<string> {
+    async sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<AIResponse> {
         try {
             if (!config.customUrl) {
                 throw new Error('Не указан URL для кастомного API');
@@ -36,7 +36,18 @@ export class CustomProvider implements IAiProvider {
             }
 
             const data = await response.json() as any;
-            return data.choices[0]?.message?.content || 'Пустой ответ от кастомного API';
+            
+            // Извлекаем информацию о токенах из ответа
+            const usage: TokenUsage = {
+                prompt_tokens: data.usage?.prompt_tokens || 0,
+                completion_tokens: data.usage?.completion_tokens || 0,
+                total_tokens: data.usage?.total_tokens || 0
+            };
+
+            return {
+                content: data.choices[0]?.message?.content || 'Пустой ответ от кастомного API',
+                usage
+            };
         } catch (error: any) {
             throw new Error(`Ошибка кастомного API: ${error.message}`);
         }
@@ -70,4 +81,4 @@ export class CustomProvider implements IAiProvider {
             throw new Error(`Невалидный URL: ${error instanceof Error ? error.message : 'неизвестная ошибка'}`);
         }
     }
-} 
+}

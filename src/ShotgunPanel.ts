@@ -5,14 +5,16 @@ import { IFileSystemService } from './services/IFileSystemService';
 import { FileSystemService } from './services/FileSystemService';
 import { ISecretStorageService } from './services/ISecretStorageService';
 import { VsCodeSecretStorageService } from './services/VsCodeSecretStorageService';
-import { 
-    Message, 
-    GetFileContentMessage, 
-    OpenFileMessage, 
+import { CostCalculationService } from './services/CostCalculationService';
+import {
+    Message,
+    GetFileContentMessage,
+    OpenFileMessage,
     SubmitToAIMessage,
     SaveResponseMessage,
     GeneratePayloadPreviewMessage,
-    ApiProvider
+    ApiProvider,
+    AIResponseData
 } from './types';
 
 /**
@@ -41,6 +43,7 @@ export class ShotgunPanel {
     private readonly _apiService: ApiService;
     private readonly _fileSystemService: IFileSystemService;
     private readonly _secretStorageService: ISecretStorageService;
+    private readonly _costService: CostCalculationService;
 
     public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
         const column = vscode.window.activeTextEditor
@@ -71,8 +74,8 @@ export class ShotgunPanel {
     }
 
     private constructor(
-        panel: vscode.WebviewPanel, 
-        extensionUri: vscode.Uri, 
+        panel: vscode.WebviewPanel,
+        extensionUri: vscode.Uri,
         context: vscode.ExtensionContext
     ) {
         this._panel = panel;
@@ -80,6 +83,7 @@ export class ShotgunPanel {
         this._apiService = new ApiService();
         this._fileSystemService = new FileSystemService();
         this._secretStorageService = new VsCodeSecretStorageService(context);
+        this._costService = new CostCalculationService();
 
         // Устанавливаем HTML содержимое
         this._setWebviewHtml();
@@ -267,9 +271,23 @@ export class ShotgunPanel {
                 template
             );
 
+            // Рассчитываем стоимость запроса
+            const cost = CostCalculationService.calculateCost(response.usage, apiConfig);
+
+            const responseData: AIResponseData = {
+                content: response.content,
+                usage: response.usage,
+                cost: {
+                    prompt_cost: cost.prompt_cost,
+                    completion_cost: cost.completion_cost,
+                    total_cost: cost.total_cost,
+                    currency: cost.currency
+                }
+            };
+
             this._panel.webview.postMessage({
                 type: 'aiResponse',
-                data: response
+                data: responseData
             });
         } catch (error: any) {
             throw error;

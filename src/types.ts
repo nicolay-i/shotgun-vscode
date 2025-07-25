@@ -38,6 +38,26 @@ export interface PromptTemplate {
     isBuiltIn: boolean;
 }
 
+// Типы для информации о токенах и стоимости
+export interface TokenUsage {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+}
+
+export interface CostInfo {
+    prompt_cost: number;
+    completion_cost: number;
+    total_cost: number;
+    currency: string;
+}
+
+export interface AIResponseData {
+    content: string;
+    usage: TokenUsage;
+    cost?: CostInfo;
+}
+
 // Типы для сообщений между Extension и Webview
 export interface Message {
     type: string;
@@ -117,7 +137,7 @@ export interface FileContentMessage extends Message {
 
 export interface AIResponseMessage extends Message {
     type: 'aiResponse';
-    data: string;
+    data: AIResponseData;
 }
 
 export interface LoadingMessage extends Message {
