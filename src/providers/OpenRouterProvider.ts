@@ -1,12 +1,12 @@
 import fetch from 'node-fetch';
 import { IAiProvider } from './IAiProvider';
-import { ApiConfig } from '../types';
+import { ApiConfig, AiResponse } from '../types';
 
 /**
  * Провайдер для работы с OpenRouter API
  */
 export class OpenRouterProvider implements IAiProvider {
-    async sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<string> {
+    async sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<AiResponse> {
         try {
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
@@ -31,9 +31,21 @@ export class OpenRouterProvider implements IAiProvider {
             }
 
             const data = await response.json() as any;
-            return data.choices[0]?.message?.content || 'Пустой ответ от OpenRouter';
+            const content = data.choices[0]?.message?.content || 'Пустой ответ от OpenRouter';
+            
+            // Извлекаем информацию о токенах из ответа OpenRouter
+            const usage = data.usage ? {
+                prompt_tokens: data.usage.prompt_tokens || 0,
+                completion_tokens: data.usage.completion_tokens || 0,
+                total_tokens: data.usage.total_tokens || 0
+            } : undefined;
+
+            return {
+                content,
+                usage
+            };
         } catch (error: any) {
             throw new Error(`Ошибка OpenRouter API: ${error.message}`);
         }
     }
-} 
+}
