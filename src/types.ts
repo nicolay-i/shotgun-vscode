@@ -115,9 +115,20 @@ export interface FileContentMessage extends Message {
     };
 }
 
+export interface TokenUsage {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+}
+
+export interface AiResponse {
+    content: string;
+    usage?: TokenUsage;
+}
+
 export interface AIResponseMessage extends Message {
     type: 'aiResponse';
-    data: string;
+    data: AiResponse;
 }
 
 export interface LoadingMessage extends Message {

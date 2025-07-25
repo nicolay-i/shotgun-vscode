@@ -1,4 +1,4 @@
-import { ApiConfig, PromptTemplate, SelectedFile } from './types';
+import { ApiConfig, PromptTemplate, SelectedFile, AiResponse } from './types';
 import { ProviderFactory } from './providers/ProviderFactory';
 
 /**
@@ -116,7 +116,7 @@ export class ApiService {
         selectedFiles: SelectedFile[],
         config: ApiConfig,
         template?: PromptTemplate
-    ): Promise<string> {
+    ): Promise<AiResponse> {
         const { systemPrompt, userPrompt } = this.formatPrompt(template, prompt, selectedFiles);
         
         // Получаем провайдер через фабрику
