@@ -101,7 +101,10 @@ export interface SaveResponseMessage extends Message {
 
 export interface FileTreeMessage extends Message {
     type: 'fileTree';
-    data: FileNode[];
+    data: {
+        files: FileNode[];
+        workspacePath: string;
+    };
 }
 
 export interface FileContentMessage extends Message {

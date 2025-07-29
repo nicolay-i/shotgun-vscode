@@ -18,7 +18,7 @@ export class FileStore {
     fileTree: FileNode[] = [];
     selectedFiles: Map<string, SelectedFile> = new Map();
     expandedFolders: Set<string> = new Set();
-    currentWorkspacePath: string = '';
+    private currentWorkspace: string | null = null;
 
     constructor() {
         makeAutoObservable(this, {
@@ -28,11 +28,19 @@ export class FileStore {
             toggleFolder: action,
             clearSelection: action,
             updateFileContent: action,
+            setWorkspace: action,
             setWorkspacePath: action,
             selectedFilesList: computed
         });
+    }
 
-        // Не загружаем состояние в конструкторе, ждем установки workspace path
+    setWorkspace(workspacePath: string) {
+        if (this.currentWorkspace !== workspacePath) {
+            this.currentWorkspace = workspacePath;
+            this.selectedFiles.clear();
+            this.expandedFolders.clear();
+            this.loadPersistedState();
+        }
     }
 
     setFileTree(tree: FileNode[]) {
@@ -109,8 +117,8 @@ export class FileStore {
     }
 
     setWorkspacePath(workspacePath: string) {
-        if (this.currentWorkspacePath !== workspacePath) {
-            this.currentWorkspacePath = workspacePath;
+        if (this.currentWorkspace !== workspacePath) {
+            this.currentWorkspace = workspacePath;
             this.loadPersistedState();
         }
     }
@@ -155,32 +163,22 @@ export class FileStore {
     }
 
     private savePersistedState() {
-        if (!this.currentWorkspacePath) {
-            return; // Не сохраняем состояние без workspace path
-        }
-
+        if (!this.currentWorkspace) return;
+        
         const state = {
             selectedFiles: Array.from(this.selectedFiles.keys()),
             expandedFolders: Array.from(this.expandedFolders)
         };
-        
-        const storageKey = this.getWorkspaceStorageKey(this.currentWorkspacePath);
+        const storageKey = `fileStore_${this.getWorkspaceHash(this.currentWorkspace)}`;
         localStorage.setItem(storageKey, JSON.stringify(state));
     }
 
     private loadPersistedState() {
-        if (!this.currentWorkspacePath) {
-            return; // Не загружаем состояние без workspace path
-        }
-
-        // Сначала очищаем текущее состояние
-        this.selectedFiles.clear();
-        this.expandedFolders.clear();
-
+        if (!this.currentWorkspace) return;
+        
         try {
-            const storageKey = this.getWorkspaceStorageKey(this.currentWorkspacePath);
+            const storageKey = `fileStore_${this.getWorkspaceHash(this.currentWorkspace)}`;
             const saved = localStorage.getItem(storageKey);
-            
             if (saved) {
                 const state = JSON.parse(saved);
                 if (state.selectedFiles) {
@@ -193,42 +191,19 @@ export class FileStore {
                 }
             }
 
-            // Попытаемся мигрировать старые данные при первом запуске
-            this.migrateOldData();
         } catch (error) {
             console.warn('Ошибка загрузки состояния FileStore:', error);
         }
     }
 
-    private getWorkspaceStorageKey(workspacePath: string): string {
-        // Создаем безопасный ключ из пути workspace
-        const normalizedPath = workspacePath.replace(/[\\\/]/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
-        return `shotgun-file-store-${normalizedPath}`;
-    }
-
-    private migrateOldData() {
-        // Проверяем, есть ли старые данные в localStorage
-        const oldData = localStorage.getItem('fileStore');
-        if (oldData && !localStorage.getItem(this.getWorkspaceStorageKey(this.currentWorkspacePath))) {
-            try {
-                const state = JSON.parse(oldData);
-                // Сохраняем старые данные для текущего workspace
-                localStorage.setItem(this.getWorkspaceStorageKey(this.currentWorkspacePath), oldData);
-                
-                // Применяем миграцию
-                if (state.selectedFiles) {
-                    state.selectedFiles.forEach((path: string) => {
-                        this.selectedFiles.set(path, { path });
-                    });
-                }
-                if (state.expandedFolders) {
-                    this.expandedFolders = new Set(state.expandedFolders);
-                }
-                
-                console.log('Данные успешно мигрированы для workspace:', this.currentWorkspacePath);
-            } catch (error) {
-                console.warn('Ошибка миграции старых данных:', error);
-            }
+    private getWorkspaceHash(workspacePath: string): string {
+        // Создаем простой хеш из пути к workspace
+        let hash = 0;
+        for (let i = 0; i < workspacePath.length; i++) {
+            const char = workspacePath.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Конвертируем в 32-битное число
         }
+        return Math.abs(hash).toString(36);
     }
 } 
