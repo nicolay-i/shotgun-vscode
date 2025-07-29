@@ -1,12 +1,12 @@
 import fetch from 'node-fetch';
 import { IAiProvider } from './IAiProvider';
-import { ApiConfig } from '../types';
+import { ApiConfig, UsageData } from '../types';
 
 /**
  * Провайдер для работы с кастомными API
  */
 export class CustomProvider implements IAiProvider {
-    async sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<string> {
+    async sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<{ response: string; usage: UsageData }> {
         try {
             if (!config.customUrl) {
                 throw new Error('Не указан URL для кастомного API');
@@ -36,7 +36,17 @@ export class CustomProvider implements IAiProvider {
             }
 
             const data = await response.json() as any;
-            return data.choices[0]?.message?.content || 'Пустой ответ от кастомного API';
+            
+            const usage: UsageData = {
+                prompt_tokens: data.usage?.prompt_tokens || 0,
+                completion_tokens: data.usage?.completion_tokens || 0,
+                total_tokens: data.usage?.total_tokens || 0
+            };
+
+            return {
+                response: data.choices[0]?.message?.content || 'Пустой ответ от кастомного API',
+                usage
+            };
         } catch (error: any) {
             throw new Error(`Ошибка кастомного API: ${error.message}`);
         }

@@ -260,7 +260,7 @@ export class ShotgunPanel {
                 })
             );
 
-            const response = await this._apiService.sendRequest(
+            const aiResponse = await this._apiService.sendRequest(
                 prompt,
                 filesWithContent,
                 apiConfig,
@@ -269,7 +269,11 @@ export class ShotgunPanel {
 
             this._panel.webview.postMessage({
                 type: 'aiResponse',
-                data: response
+                data: {
+                    response: aiResponse.response,
+                    usage: aiResponse.usage,
+                    cost: aiResponse.cost
+                }
             });
         } catch (error: any) {
             throw error;

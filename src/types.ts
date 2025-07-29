@@ -1,3 +1,23 @@
+// Типы для использования токенов и стоимости
+export interface UsageData {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    total_time?: number;
+    cost_request?: number;
+    cost_response?: number;
+    cost_total?: number;
+    free_request?: boolean;
+}
+
+// Прайсинг для моделей разных провайдеров
+export interface ModelPricing {
+    provider: ApiProvider;
+    model: string;
+    input_cost_per_1k: number; // стоимость за 1000 токенов входа
+    output_cost_per_1k: number; // стоимость за 1000 токенов выхода
+}
+
 // Типы для файловой системы
 export interface FileNode {
     name: string;
@@ -117,7 +137,21 @@ export interface FileContentMessage extends Message {
 
 export interface AIResponseMessage extends Message {
     type: 'aiResponse';
-    data: string;
+    data: {
+        response: string;
+        usage?: UsageData;
+    };
+}
+
+export interface AIResponse {
+    response: string;
+    usage: UsageData;
+    cost: {
+        totalCost: number;
+        promptCost: number;
+        completionCost: number;
+        currency: string;
+    };
 }
 
 export interface LoadingMessage extends Message {

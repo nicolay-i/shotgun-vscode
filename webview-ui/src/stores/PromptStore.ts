@@ -1,8 +1,37 @@
 import { makeAutoObservable, action } from 'mobx';
 
+export interface AIResponseData {
+    response: string;
+    usage?: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+        cost_request?: number;
+        cost_response?: number;
+        cost_total?: number;
+    };
+    cost?: {
+        totalCost: number;
+        promptCost: number;
+        completionCost: number;
+        currency: string;
+    };
+}
+
 export class PromptStore {
     currentPrompt: string = '';
     aiResponse: string = '';
+    tokenUsage?: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+    };
+    costInfo?: {
+        totalCost: number;
+        promptCost: number;
+        completionCost: number;
+        currency: string;
+    };
     isSubmitting: boolean = false;
     isPreviewModalOpen: boolean = false;
     payloadPreviewData: { systemPrompt: string; userPrompt: string; payload: any } | null = null;
@@ -13,6 +42,8 @@ export class PromptStore {
             setCurrentPrompt: action,
             setAiResponse: action,
             setSubmitting: action,
+            setTokenUsage: action,
+            setCostInfo: action,
             clearPrompt: action,
             clearResponse: action,
             clearAll: action,
@@ -31,6 +62,14 @@ export class PromptStore {
 
     setAiResponse(response: string) {
         this.aiResponse = response;
+    }
+
+    setTokenUsage(usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number }) {
+        this.tokenUsage = usage;
+    }
+
+    setCostInfo(cost: { totalCost: number; promptCost: number; completionCost: number; currency: string }) {
+        this.costInfo = cost;
     }
 
     setSubmitting(submitting: boolean) {
@@ -56,11 +95,15 @@ export class PromptStore {
 
     clearResponse() {
         this.aiResponse = '';
+        this.tokenUsage = undefined;
+        this.costInfo = undefined;
     }
 
     clearAll() {
         this.currentPrompt = '';
         this.aiResponse = '';
+        this.tokenUsage = undefined;
+        this.costInfo = undefined;
         this.isSubmitting = false;
         this.savePersistedState();
     }
@@ -71,6 +114,10 @@ export class PromptStore {
 
     get isValidForSubmission(): boolean {
         return this.currentPrompt.trim().length > 0 && !this.isSubmitting;
+    }
+
+    get hasTokenInfo(): boolean {
+        return !!(this.tokenUsage && this.costInfo);
     }
 
     private savePersistedState() {
@@ -93,4 +140,4 @@ export class PromptStore {
             console.warn('Ошибка загрузки состояния PromptStore:', error);
         }
     }
-} 
+}

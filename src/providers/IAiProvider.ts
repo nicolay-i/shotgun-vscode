@@ -1,4 +1,4 @@
-import { ApiConfig } from '../types';
+import { ApiConfig, UsageData } from '../types';
 
 /**
  * Интерфейс для провайдеров AI-сервисов
@@ -10,8 +10,8 @@ export interface IAiProvider {
      * @param systemPrompt Системный промпт для AI
      * @param userPrompt Пользовательский промпт
      * @param config Конфигурация API
-     * @returns Ответ от AI-провайдера
+     * @returns Объект с ответом от AI-провайдера и данными об использовании токенов
      * @throws Error при ошибке запроса
      */
-    sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<string>;
-} 
+    sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<{ response: string; usage: UsageData }>;
+}

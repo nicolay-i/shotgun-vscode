@@ -1,12 +1,12 @@
 import OpenAI from 'openai';
 import { IAiProvider } from './IAiProvider';
-import { ApiConfig } from '../types';
+import { ApiConfig, UsageData } from '../types';
 
 /**
  * Провайдер для работы с OpenAI API
  */
 export class OpenAiProvider implements IAiProvider {
-    async sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<string> {
+    async sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<{ response: string; usage: UsageData }> {
         try {
             const openai = new OpenAI({
                 apiKey: config.apiKey,
@@ -21,9 +21,18 @@ export class OpenAiProvider implements IAiProvider {
                 temperature: 0.7,
             });
 
-            return response.choices[0]?.message?.content || 'Пустой ответ от OpenAI';
+            const usage: UsageData = {
+                prompt_tokens: response.usage?.prompt_tokens || 0,
+                completion_tokens: response.usage?.completion_tokens || 0,
+                total_tokens: response.usage?.total_tokens || 0
+            };
+
+            return {
+                response: response.choices[0]?.message?.content || 'Пустой ответ от OpenAI',
+                usage
+            };
         } catch (error: any) {
             throw new Error(`Ошибка OpenAI API: ${error.message}`);
         }
     }
-} 
+}

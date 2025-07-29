@@ -1,5 +1,6 @@
-import { ApiConfig, PromptTemplate, SelectedFile } from './types';
+import { ApiConfig, PromptTemplate, SelectedFile, AIResponse } from './types';
 import { ProviderFactory } from './providers/ProviderFactory';
+import { calculateCost } from './providers/pricing';
 
 /**
  * Сервис для работы с AI API
@@ -116,12 +117,29 @@ export class ApiService {
         selectedFiles: SelectedFile[],
         config: ApiConfig,
         template?: PromptTemplate
-    ): Promise<string> {
+    ): Promise<AIResponse> {
         const { systemPrompt, userPrompt } = this.formatPrompt(template, prompt, selectedFiles);
         
         // Получаем провайдер через фабрику
         const provider = ProviderFactory.getProvider(config.provider);
         
-        return provider.sendRequest(systemPrompt, userPrompt, config);
+        const result = await provider.sendRequest(systemPrompt, userPrompt, config);
+        
+        // Рассчитываем стоимость
+        const cost = calculateCost(config.provider, config.model, result.usage);
+        
+        // Обновляем данные об использовании с информацией о стоимости
+        const usage = {
+            ...result.usage,
+            cost_request: cost.promptCost,
+            cost_response: cost.completionCost,
+            cost_total: cost.totalCost
+        };
+        
+        return {
+            response: result.response,
+            usage,
+            cost
+        };
     }
 } 
