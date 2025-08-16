@@ -1,4 +1,4 @@
-import { ApiConfig } from '../types';
+import { ApiConfig, AiResponse } from '../types';
 
 /**
  * Интерфейс для провайдеров AI-сервисов
@@ -13,5 +13,5 @@ export interface IAiProvider {
      * @returns Ответ от AI-провайдера
      * @throws Error при ошибке запроса
      */
-    sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<string>;
+    sendRequest(systemPrompt: string, userPrompt: string, config: ApiConfig): Promise<AiResponse>;
 } 

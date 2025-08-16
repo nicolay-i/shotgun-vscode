@@ -1,8 +1,20 @@
 import { makeAutoObservable, action } from 'mobx';
 
+// Типы для токенов (дублируем из бэкенда для независимости фронтенда)
+interface TokenUsage {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+}
+
+interface AiResponse {
+    content: string;
+    usage?: TokenUsage;
+}
+
 export class PromptStore {
     currentPrompt: string = '';
-    aiResponse: string = '';
+    aiResponse: AiResponse | null = null;
     isSubmitting: boolean = false;
     isPreviewModalOpen: boolean = false;
     payloadPreviewData: { systemPrompt: string; userPrompt: string; payload: any } | null = null;
@@ -29,8 +41,16 @@ export class PromptStore {
         this.savePersistedState();
     }
 
-    setAiResponse(response: string) {
-        this.aiResponse = response;
+    setAiResponse(response: AiResponse | string) {
+        // Если пришла строка, преобразуем её в объект AiResponse
+        if (typeof response === 'string') {
+            this.aiResponse = {
+                content: response,
+                usage: undefined
+            };
+        } else {
+            this.aiResponse = response;
+        }
     }
 
     setSubmitting(submitting: boolean) {
@@ -55,18 +75,18 @@ export class PromptStore {
     }
 
     clearResponse() {
-        this.aiResponse = '';
+        this.aiResponse = null;
     }
 
     clearAll() {
         this.currentPrompt = '';
-        this.aiResponse = '';
+        this.aiResponse = null;
         this.isSubmitting = false;
         this.savePersistedState();
     }
 
     get hasResponse(): boolean {
-        return this.aiResponse.length > 0;
+        return this.aiResponse !== null && this.aiResponse.content.length > 0;
     }
 
     get isValidForSubmission(): boolean {

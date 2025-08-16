@@ -23,14 +23,13 @@ export const PromptSection: React.FC = observer(() => {
             promptStore.setSubmitting(true);
 
             // Отправляем запрос к AI с текущим шаблоном
-            // Преобразуем observable объекты в plain objects для postMessage
+            // Отправляем только пути файлов, содержимое будет загружено на бэкенде
             appStore.sendMessage({
                 type: 'submitToAI',
                 data: {
                     prompt: promptStore.currentPrompt,
                     selectedFiles: fileStore.selectedFilesList.map(file => ({
-                        path: file.path,
-                        content: file.content || ''
+                        path: file.path
                     })),
                     apiConfig: {
                         provider: apiStore.currentApiConfig.provider,
@@ -67,30 +66,13 @@ export const PromptSection: React.FC = observer(() => {
         promptStore.setPayloadPreviewData(null); // Очищаем предыдущие данные
         
         try {
-            // Сначала загружаем содержимое всех выбранных файлов, которые еще не загружены
-            const filesToLoad = fileStore.selectedFilesList.filter(file => !file.content);
-            
-            // Запрашиваем содержимое файлов
-            filesToLoad.forEach(file => {
-                appStore.sendMessage({
-                    type: 'getFileContent',
-                    data: { filePath: file.path }
-                });
-            });
-            
-            // Небольшая задержка для загрузки файлов
-            if (filesToLoad.length > 0) {
-                await new Promise(resolve => setTimeout(resolve, 100 * filesToLoad.length));
-            }
-            
-            // Теперь запрашиваем данные предпросмотра от сервера
+            // Отправляем запрос на предпросмотр, содержимое файлов будет загружено на бэкенде
             appStore.sendMessage({
                 type: 'generatePayloadPreview',
                 data: {
                     prompt: promptStore.currentPrompt,
                     selectedFiles: fileStore.selectedFilesList.map(file => ({
-                        path: file.path,
-                        content: file.content || ''
+                        path: file.path
                     })),
                     apiConfig: {
                         provider: apiStore.currentApiConfig.provider,
@@ -109,7 +91,7 @@ export const PromptSection: React.FC = observer(() => {
                 }
             });
             
-            // Затем открываем модальное окно
+            // Открываем модальное окно
             promptStore.setPreviewModalOpen(true);
         } catch (error) {
             console.error('Ошибка при загрузке предпросмотра:', error);

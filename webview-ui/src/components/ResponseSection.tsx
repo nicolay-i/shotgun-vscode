@@ -13,7 +13,7 @@ export const ResponseSection: React.FC = observer(() => {
             appStore.sendMessage({
                 type: 'saveResponse',
                 data: {
-                    content: promptStore.aiResponse,
+                    content: promptStore.aiResponse?.content || '',
                     templateName: templateStore.selectedTemplate?.name
                 }
             });
@@ -23,7 +23,7 @@ export const ResponseSection: React.FC = observer(() => {
     const handleCopyResponse = async () => {
         if (promptStore.aiResponse) {
             try {
-                await navigator.clipboard.writeText(promptStore.aiResponse);
+                await navigator.clipboard.writeText(promptStore.aiResponse?.content || '');
                 // Можно показать уведомление об успешном копировании
             } catch (error) {
                 console.error('Ошибка копирования:', error);
@@ -67,8 +67,13 @@ export const ResponseSection: React.FC = observer(() => {
             </div>
             <div className="response-section__content">
                 <pre className="response-section__text">
-                    {promptStore.aiResponse}
+                    {promptStore.aiResponse?.content}
                 </pre>
+                {promptStore.aiResponse?.usage && (
+                    <div className="response-section__tokens">
+                        Токены: {promptStore.aiResponse.usage.prompt_tokens} (запрос) + {promptStore.aiResponse.usage.completion_tokens} (ответ) = {promptStore.aiResponse.usage.total_tokens} (всего)
+                    </div>
+                )}
             </div>
         </div>
     );
