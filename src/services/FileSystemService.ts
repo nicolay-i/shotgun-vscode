@@ -130,7 +130,7 @@ export class FileSystemService implements IFileSystemService {
             '.json', '.xml', '.yaml', '.yml', '.toml',
             '.md', '.txt', '.py', '.java', '.c', '.cpp', '.h',
             '.cs', '.php', '.rb', '.go', '.rs', '.swift',
-            '.kt', '.scala', '.dart', '.sh', '.bat', '.ps1',
+            '.kt', '.kts', '.scala', '.dart', '.sh', '.bat', '.ps1',
             '.sql', '.graphql', '.prisma', '.proto'
         ];
 
